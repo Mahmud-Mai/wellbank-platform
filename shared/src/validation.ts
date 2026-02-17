@@ -120,14 +120,17 @@ export const paginationSchema = z.object({
 export type PaginationParams = z.infer<typeof paginationSchema>;
 
 // API Response types
+export type ApiStatus = string; // "success" | "error" | "fail" | "pending" | etc.
+
 export interface ApiResponse<T> {
-  success: boolean;
+  status: ApiStatus;
+  message?: string;
   data?: T;
-  error?: {
+  errors?: Array<{
     code: string;
     message: string;
-    details?: any;
-  };
+    details?: unknown;
+  }>;
   meta?: {
     page?: number;
     limit?: number;
