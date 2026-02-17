@@ -7,6 +7,7 @@ import {
   Gender,
   IdentificationType,
   VerificationStatus,
+  DocumentVerificationStatus,
   ConsultationType,
   ConsultationStatus,
   RecordType,
@@ -27,7 +28,9 @@ import {
   JobType,
   JobStatus,
   NotificationType,
-  NotificationChannel
+  NotificationChannel,
+  KycLevel,
+  ProviderStatus as ProviderStatusEnum
 } from "./enums";
 
 // Common types
@@ -68,6 +71,85 @@ export interface AccessLog {
   ipAddress?: string;
 }
 
+// Nigerian Regulatory Fields (Universal Compliance)
+export interface NigerianRegulatoryFields {
+  nin?: string;
+  bvn?: string;
+  cac_number?: string;
+  cac_document_url?: string;
+  mdcn_license_number?: string;
+  mdcn_expiry_date?: Date;
+  pcn_license_number?: string;
+  pcn_expiry_date?: Date;
+  mlscn_license_number?: string;
+  mlscn_expiry_date?: Date;
+}
+
+// NDPR Compliance Flags
+export interface NdprCompliance {
+  ndprConsent: boolean;
+  dataProcessingConsent: boolean;
+  marketingConsent?: boolean;
+  consentDate?: Date;
+  withdrawalDate?: Date;
+}
+
+// Document Management
+export interface Document {
+  id: string;
+  ownerId: string;
+  documentType: DocumentType;
+  fileUrl: string;
+  fileName: string;
+  mimeType: string;
+  fileSize: number;
+  verificationStatus: DocumentVerificationStatus;
+  expiryDate?: Date;
+  issuedDate?: Date;
+  issuingAuthority?: string;
+  documentNumber?: string;
+  reviewedBy?: string;
+  reviewedAt?: Date;
+  rejectionReason?: string;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+export enum DocumentType {
+  NIN = "nin",
+  BVN = "bvn",
+  CAC_CERTIFICATE = "cac_certificate",
+  MDCN_LICENSE = "mdcn_license",
+  PCN_LICENSE = "pcn_license",
+  MLSCN_LICENSE = "mlscn_license",
+  PROFILE_PHOTO = "profile_photo",
+  PROOF_OF_ADDRESS = "proof_of_address",
+  BANK_STATEMENT = "bank_statement",
+  INSURANCE_CARD = "insurance_card",
+  MEDICAL_RECORD = "medical_record",
+  PRESCRIPTION = "prescription",
+  LAB_RESULT = "lab_result",
+  OTHER = "other"
+}
+
+// Universal Compliance Profile
+export interface UniversalComplianceProfile {
+  userId: string;
+  kycLevel: KycLevel;
+  ninVerified: boolean;
+  bvnVerified: boolean;
+  regulatoryVerified: boolean;
+  providerStatus: ProviderStatusEnum;
+  suspensionReason?: string;
+  suspendedAt?: Date;
+  suspendedBy?: string;
+  reactivations?: Array<{
+    reactivatedAt: Date;
+    reactivatedBy: string;
+    reason: string;
+  }>;
+}
+
 // User and Authentication
 export interface User {
   id: string;
@@ -75,7 +157,12 @@ export interface User {
   role: UserRole;
   isVerified: boolean;
   isKycVerified: boolean;
+  kycLevel: KycLevel;
   mfaEnabled: boolean;
+  providerStatus?: ProviderStatusEnum;
+  ndprConsent: boolean;
+  dataProcessingConsent: boolean;
+  marketingConsent?: boolean;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -109,12 +196,21 @@ export interface PatientProfile {
   dateOfBirth: Date;
   gender: Gender;
   phoneNumber: string;
+  email?: string;
   identificationNumber: string;
   identificationType: IdentificationType;
+  nin?: string;
+  bvn?: string;
+  kycLevel: KycLevel;
+  isKycVerified: boolean;
   address: Address;
   emergencyContacts: EmergencyContact[];
   allergies: string[];
   chronicConditions: string[];
+  bloodType?: string;
+  ndprConsent: boolean;
+  dataProcessingConsent: boolean;
+  marketingConsent?: boolean;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -152,15 +248,28 @@ export interface AvailabilitySlot {
 export interface Doctor {
   id: string;
   userId: string;
-  licenseNumber: string;
-  licenseVerificationStatus: VerificationStatus;
+  firstName: string;
+  lastName: string;
+  profilePhoto?: string;
+  bio?: string;
   specialties: Specialty[];
   qualifications: Qualification[];
   availability: AvailabilitySlot[];
+  licenseNumber: string;
+  mdcnLicenseNumber?: string;
+  mdcnExpiryDate?: Date;
+  licenseVerificationStatus: VerificationStatus;
+  licenseExpiryDate?: Date;
+  nin?: string;
+  bvn?: string;
+  providerStatus: ProviderStatusEnum;
+  suspensionReason?: string;
   consultationFee: number;
   rating: number;
   reviewCount: number;
   hasAmbulance: boolean;
+  acceptsInsurance: boolean;
+  languages?: string[];
   createdAt: Date;
   updatedAt: Date;
 }
@@ -352,6 +461,142 @@ export interface EmergencyProvider {
   phoneNumber: string;
 }
 
+// Hospital Profile (Role-Specific)
+export interface HospitalProfile {
+  id: string;
+  userId: string;
+  name: string;
+  logo?: string;
+  description?: string;
+  phoneNumber: string;
+  email: string;
+  website?: string;
+  address: Address;
+  bedCapacity: number;
+  occupiedBeds?: number;
+  icuBeds?: number;
+  emergencyBeds?: number;
+  departments: string[];
+  hasAmbulance: boolean;
+  ambulanceCount?: number;
+  hasEmergencyRoom: boolean;
+  hasPharmacy: boolean;
+  hasLaboratory: boolean;
+  hasRadiology: boolean;
+  accreditations: string[];
+  operatingHours: OperatingHours;
+  rating?: number;
+  reviewCount?: number;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+export interface OperatingHours {
+  monday?: string;
+  tuesday?: string;
+  wednesday?: string;
+  thursday?: string;
+  friday?: string;
+  saturday?: string;
+  sunday?: string;
+}
+
+// Pharmacy Profile (Role-Specific)
+export interface PharmacyProfile {
+  id: string;
+  userId: string;
+  name: string;
+  logo?: string;
+  description?: string;
+  phoneNumber: string;
+  email: string;
+  address: Address;
+  hasColdChain: boolean;
+  offersDelivery: boolean;
+  deliveryFee?: number;
+  deliveryRadius?: number;
+  averageDeliveryTime: number;
+  minimumOrderValue?: number;
+  operatingHours: OperatingHours;
+  licenseNumber: string;
+  pcnLicenseNumber?: string;
+  pcnExpiryDate?: Date;
+  cacNumber?: string;
+  rating?: number;
+  reviewCount?: number;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+// Laboratory Profile (Role-Specific)
+export interface LaboratoryProfile {
+  id: string;
+  userId: string;
+  name: string;
+  logo?: string;
+  description?: string;
+  phoneNumber: string;
+  email: string;
+  address: Address;
+  offersHomeCollection: boolean;
+  homeCollectionFee?: number;
+  averageTurnaroundTime: number;
+  testCategories: string[];
+  accreditations: string[];
+  mlscnLicenseNumber?: string;
+  mlscnExpiryDate?: Date;
+  cacNumber?: string;
+  operatingHours: OperatingHours;
+  rating?: number;
+  reviewCount?: number;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+// Insurance Provider Profile
+export interface InsuranceProviderProfile {
+  id: string;
+  userId: string;
+  name: string;
+  logo?: string;
+  description?: string;
+  phoneNumber: string;
+  email: string;
+  website?: string;
+  address: Address;
+  coverageTypes: CoverageType[];
+  policyTypes: string[];
+  claimProcess: string;
+  customerSupportHours: string;
+  rating?: number;
+  reviewCount?: number;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+// Emergency Provider Profile
+export interface EmergencyProviderProfile {
+  id: string;
+  userId: string;
+  name: string;
+  logo?: string;
+  description?: string;
+  phoneNumber: string;
+  email: string;
+  address: Address;
+  serviceTypes: string[];
+  coverageAreas: string[];
+  ambulanceCount: number;
+  averageResponseTime: number;
+  hasAdvancedLifeSupport: boolean;
+  hasBasicLifeSupport: boolean;
+  operatingHours: OperatingHours;
+  rating?: number;
+  reviewCount?: number;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
 // Provider Verification
 export interface ProviderVerification {
   id: string;
@@ -364,6 +609,21 @@ export interface ProviderVerification {
   reviewedAt?: Date;
   rejectionReason?: string;
   expiresAt: Date;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+export interface ProviderOnboarding {
+  id: string;
+  userId: string;
+  currentStep: OnboardingStepType;
+  completedSteps: OnboardingStepType[];
+  status: ProviderStatusEnum;
+  startedAt: Date;
+  completedAt?: Date;
+  suspendedAt?: Date;
+  suspensionReason?: string;
+  documents: Document[];
   createdAt: Date;
   updatedAt: Date;
 }
