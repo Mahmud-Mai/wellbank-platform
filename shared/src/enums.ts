@@ -13,6 +13,22 @@ export enum UserRole {
   PROVIDER_ADMIN = "provider_admin"
 }
 
+export enum KycLevel {
+  LEVEL_0 = 0, // Unverified
+  LEVEL_1 = 1, // Email/Phone verified
+  LEVEL_2 = 2, // Basic ID verified
+  LEVEL_3 = 3, // Full identity verified (NIN/BVN)
+  LEVEL_4 = 4  // Full compliance verified
+}
+
+export enum ProviderStatus {
+  PENDING = "pending",
+  UNDER_REVIEW = "under_review",
+  ACTIVE = "active",
+  SUSPENDED = "suspended",
+  DEACTIVATED = "deactivated"
+}
+
 export enum Gender {
   MALE = "male",
   FEMALE = "female",
@@ -27,6 +43,14 @@ export enum IdentificationType {
 export enum VerificationStatus {
   PENDING = "pending",
   APPROVED = "approved",
+  REJECTED = "rejected",
+  EXPIRED = "expired"
+}
+
+export enum DocumentVerificationStatus {
+  UNVERIFIED = "unverified",
+  PENDING = "pending",
+  VERIFIED = "verified",
   REJECTED = "rejected",
   EXPIRED = "expired"
 }
@@ -153,8 +177,10 @@ export enum ProviderType {
 
 export enum OnboardingStepType {
   BASIC_INFO = "basic_info",
+  PROFESSIONAL_INFO = "professional_info",
   IDENTITY_VERIFICATION = "identity_verification",
-  LICENSE_VERIFICATION = "license_verification",
+  REGULATORY_VERIFICATION = "regulatory_verification",
+  BANKING_SETUP = "banking_setup",
   DOCUMENT_UPLOAD = "document_upload",
   ADMIN_REVIEW = "admin_review",
   PROFILE_SETUP = "profile_setup"

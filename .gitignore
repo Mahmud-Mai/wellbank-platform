@@ -53,3 +53,7 @@ vault/logs/
 tmp/
 temp/
 *.tmp
+
+/PRDs
+WellBank\ digital\ healthcare\ platform.pdf
+WellBank\ Onboarding\ Forms\ PRD.pdf
