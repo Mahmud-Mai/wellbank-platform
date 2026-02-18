@@ -4,11 +4,13 @@ import { TypeOrmModule } from "@nestjs/typeorm";
 import { WinstonModule } from "nest-winston";
 import { EventEmitterModule } from "@nestjs/event-emitter";
 import { BullModule } from "@nestjs/bullmq";
+import { ScheduleModule } from "@nestjs/schedule";
 import configuration from "./config/configuration";
 import { getDatabaseConfig } from "./config/database.config";
 import { getLoggerConfig } from "./config/logger.config";
 import { AppController } from "./app.controller";
 import { AppService } from "./app.service";
+import { AuthModule } from "./modules/auth/auth.module";
 
 @Module({
   imports: [
@@ -19,12 +21,12 @@ import { AppService } from "./app.service";
       envFilePath: [".env.local", ".env"]
     }),
 
-    // Winston logging
-    WinstonModule.forRootAsync({
-      inject: [ConfigService],
-      useFactory: (configService: ConfigService) =>
-        getLoggerConfig(configService)
-    }),
+    // Winston logging - temporarily disabled for debugging
+    // WinstonModule.forRootAsync({
+    //   inject: [ConfigService],
+    //   useFactory: (configService: ConfigService) =>
+    //     getLoggerConfig(configService)
+    // }),
 
     // TypeORM database connection
     TypeOrmModule.forRootAsync({
@@ -45,23 +47,24 @@ import { AppService } from "./app.service";
     }),
 
     // BullMQ for background jobs
-    BullModule.forRootAsync({
-      inject: [ConfigService],
-      useFactory: (configService: ConfigService) => ({
-        connection: {
-          host: configService.get<string>("redis.host"),
-          port: configService.get<number>("redis.port"),
-          password: configService.get<string>("redis.password"),
-          db: configService.get<number>("redis.db")
-        }
-      })
-    })
+    // Temporarily disabled to debug startup issue
+    // BullModule.forRootAsync({
+    //   inject: [ConfigService],
+    //   useFactory: (configService: ConfigService) => ({
+    //     connection: {
+    //       host: configService.get<string>("redis.host"),
+    //       port: configService.get<number>("redis.port"),
+    //       password: configService.get<string>("redis.password"),
+    //       db: configService.get<number>("redis.db")
+    //     }
+    //   })
+    // }),
 
-    // Feature modules will be added here as we build them
-    // AuthModule,
-    // UserModule,
-    // ConsultationModule,
-    // etc.
+    // Schedule for cron jobs
+    ScheduleModule.forRoot(),
+
+    // Feature modules
+    AuthModule,
   ],
   controllers: [AppController],
   providers: [AppService]
