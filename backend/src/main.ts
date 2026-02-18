@@ -2,7 +2,7 @@ import { NestFactory } from "@nestjs/core";
 import { ValidationPipe } from "@nestjs/common";
 import { ConfigService } from "@nestjs/config";
 import { SwaggerModule, DocumentBuilder } from "@nestjs/swagger";
-import { WINSTON_MODULE_NEST_PROVIDER } from "nest-winston";
+// import { WINSTON_MODULE_NEST_PROVIDER } from "nest-winston";
 import helmet from "helmet";
 import compression from "compression";
 import { AppModule } from "./app.module";
@@ -15,8 +15,8 @@ async function bootstrap() {
   // Get configuration service
   const configService = app.get(ConfigService);
 
-  // Use Winston logger
-  app.useLogger(app.get(WINSTON_MODULE_NEST_PROVIDER));
+  // Use Winston logger (temporarily disabled)
+  // app.useLogger(app.get(WINSTON_MODULE_NEST_PROVIDER));
 
   // Security middleware
   app.use(helmet());
@@ -41,7 +41,7 @@ async function bootstrap() {
   );
 
   // API prefix
-  const apiPrefix = configService.get<string>("app.apiPrefix");
+  const apiPrefix = configService.get<string>("app.apiPrefix") ?? 'api/v1';
   app.setGlobalPrefix(apiPrefix);
 
   // Swagger/OpenAPI documentation
@@ -71,7 +71,7 @@ async function bootstrap() {
   });
 
   // Start server
-  const port = configService.get<number>("app.port");
+  const port = configService.get<number>("app.port") ?? 3000;
   await app.listen(port);
 
   console.log(`
