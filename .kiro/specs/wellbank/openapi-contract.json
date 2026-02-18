@@ -1,0 +1,36 @@
+{
+  "openapi": "3.0.3",
+  "info": {
+    "title": "WellBank Healthcare Platform API",
+    "description": "Contract-first API specification for WellBank - A unified digital healthcare coordination platform for Africa. This specification serves as the source of truth for both frontend (Lovable/Next.js) and backend (NestJS) development.",
+    "version": "1.0.0",
+    "contact": {
+      "name": "WellBank API Support",
+      "email": "api@wellbank.health"
+    }
+  },
+  "servers": [
+    {
+      "url": "http://localhost:35432/api/v1",
+      "description": "Local development server (custom ports to avoid conflicts)"
+    },
+    {
+      "url": "https://api.wellbank.health/v1",
+      "description": "Production server"
+    }
+  ],
+  "tags": [
+    { "name": "Authentication", "description": "User authentication and authorization" },
+    { "name": "Patient", "description": "Patient profile and medical records management" },
+    { "name": "Doctor", "description": "Doctor discovery and management" },
+    { "name": "Consultation", "description": "Consultation booking and management" },
+    { "name": "Laboratory", "description": "Lab test ordering and results" },
+    { "name": "Pharmacy", "description": "Medication ordering and delivery" },
+    { "name": "Wallet", "description": "Digital wallet and payments" },
+    { "name": "Insurance", "description": "Insurance coverage and claims" },
+    { "name": "Emergency", "description": "Emergency services" },
+    { "name": "Notifications", "description": "Notification management" },
+    { "name": "WellPoints", "description": "Wellness rewards system" },
+    { "name": "Admin", "description": "Platform administration" }
+  ],
+  "paths": {
