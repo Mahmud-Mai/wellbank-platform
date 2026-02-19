@@ -2,15 +2,21 @@
  * Shared enums for WellBank platform
  */
 
+/**
+ * User roles on the platform.
+ * 
+ * DESIGN DECISION (Deviation from PRD):
+ * - PRD specifies: patient, doctor, lab, pharmacy, insurance, emergency, admin
+ * - We simplified to 3 roles + wellbank_admin (seeded)
+ * 
+ * @see OrganizationType for organization types (hospital, lab, pharmacy, insurance, emergency, logistics)
+ * @see OrganizationMemberRole for roles within organizations
+ */
 export enum UserRole {
   PATIENT = "patient",
   DOCTOR = "doctor",
-  LABORATORY = "laboratory",
-  PHARMACY = "pharmacy",
-  INSURANCE_PROVIDER = "insurance_provider",
-  EMERGENCY_PROVIDER = "emergency_provider",
-  WELLBANK_ADMIN = "wellbank_admin",
-  PROVIDER_ADMIN = "provider_admin"
+  PROVIDER_ADMIN = "provider_admin",  // Creates organizations (hospital/lab/pharmacy/etc)
+  WELLBANK_ADMIN = "wellbank_admin"  // Platform admin (seeded, created by super admin)
 }
 
 export enum KycLevel {
@@ -173,6 +179,47 @@ export enum ProviderType {
   LABORATORY = "laboratory",
   HOSPITAL = "hospital",
   AMBULANCE = "ambulance"
+}
+
+/**
+ * Organization types - created by provider_admin users
+ * 
+ * DESIGN DECISION (Deviation from PRD):
+ * - PRD specifies users register directly as: lab, pharmacy, hospital
+ * - We model these as ORGANIZATIONS created by provider_admin users
+ * 
+ * All are businesses (not individual people):
+ * - hospital, laboratory, pharmacy, clinic = healthcare facilities
+ * - insurance, emergency, logistics = service providers
+ */
+export enum OrganizationType {
+  HOSPITAL = "hospital",
+  LABORATORY = "laboratory",
+  PHARMACY = "pharmacy",
+  CLINIC = "clinic",
+  INSURANCE = "insurance",
+  EMERGENCY = "emergency",
+  LOGISTICS = "logistics"
+}
+
+/**
+ * Roles a user can have within an organization
+ * 
+ * These are SCOPED to the organization, not global user roles.
+ * A user can be "doctor" at Hospital A and "pharmacist" at Pharmacy B.
+ * 
+ * DESIGN DECISION:
+ * - Predefined roles for MVP (simpler than custom RBAC)
+ * - Organization creator (provider_admin) automatically becomes org admin
+ */
+export enum OrganizationMemberRole {
+  ADMIN = "admin",           // Can manage organization, invite members
+  DOCTOR = "doctor",         // Healthcare provider
+  PHARMACIST = "pharmacist", // Pharmacy staff
+  LAB_TECH = "lab_tech",     // Lab staff
+  NURSE = "nurse",          // Nursing staff
+  RECEPTIONIST = "receptionist", // Front desk
+  STAFF = "staff"           // General staff
 }
 
 export enum OnboardingStepType {

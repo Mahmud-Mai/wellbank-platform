@@ -2,86 +2,47 @@
 
 This document tracks architectural decisions, open discussions, and unresolved questions. It serves as a living reference for all developers and AI agents working on the project.
 
+**Principle:** The PRD is the source of truth for product decisions. Where the PRD specifies requirements, we follow them. Technical implementation choices are documented here.
+
 **Status Legend:** `OPEN` = under discussion | `DECIDED` = decision made | `IMPLEMENTED` = code reflects this
 
 ---
 
 ## DD-001: User Entity Model — Single Role vs. Multi-Role Hybrid
 
-**Status:** OPEN
+**Status:** DECIDED
+**Decision:** Multi-role hybrid — single user + roles table + per-role profile tables + organization membership
 **Date Opened:** 2026-02-18
+**Date Decided:** 2026-02-19
 **Affects:** Auth module, onboarding, all profile modules, wallet, medical records
 **Blocking:** Task 7 (User Profiles), Task 8 (Dojah KYC), Task 9 (Provider Onboarding)
 
-### Problem
+### Decision Summary
 
-The current implementation uses a **single `role` enum column** on the `users` table (`user.entity.ts:24`). This means:
+**Simplified User Roles (deviation from PRD):**
+- Users register as: `patient`, `doctor`, or `provider_admin`
+- Labs/Pharmacies/Hospitals are **Organizations**, not user roles
+- Users can ADD more roles later (e.g., patient adds doctor role)
 
-- A user can only have ONE role (patient, doctor, lab, pharmacy, etc.)
-- A doctor cannot also be a patient without creating a second account with a different email
-- `email` is unique, so one person = one role
+**Why this approach (vs PRD):**
+1. Cleaner separation of concerns — people are users, businesses are organizations
+2. Organizations can have branches, multiple locations
+3. Staff roles are scoped to organizations, not global
+4. Easier to add new organization types without changing user model
+5. Everyone logs in as a user — simpler authentication
 
-This is a real limitation because:
+**Implementation:**
+- `UserRole` enum: patient, doctor, provider_admin, insurance_provider, emergency_provider, wellbank_admin
+- `OrganizationType` enum: hospital, laboratory, pharmacy, clinic, lab_chain, pharmacy_chain
+- `OrganizationMemberRole` enum: admin, doctor, pharmacist, lab_tech, nurse, receptionist, staff
 
-1. Doctors get sick — they should be able to book consultations as patients
-2. A pharmacy owner might also be a patient
-3. A provider admin might need patient access for testing/demo purposes
-4. Forcing multiple accounts creates data silos (separate wallets, separate medical histories, separate KYC)
+### Implementation
 
-### Current Implementation
+See DD-001 Decision Summary above for the final implementation details.
 
-```typescript
-// shared/src/enums.ts
-export enum UserRole {
-  PATIENT = "patient",
-  DOCTOR = "doctor",
-  LABORATORY = "laboratory",
-  PHARMACY = "pharmacy",
-  INSURANCE_PROVIDER = "insurance_provider",
-  EMERGENCY_PROVIDER = "emergency_provider",
-  WELLBANK_ADMIN = "wellbank_admin",
-  PROVIDER_ADMIN = "provider_admin"
-}
+---
 
-// backend/src/modules/auth/entities/user.entity.ts
-@Column({ type: 'enum', enum: UserRole, default: UserRole.PATIENT })
-role: UserRole;  // Single role only
-```
-
-### Options Considered
-
-#### Option A: Keep Single Role (Current)
-
-- Simplest to implement
-- One login route, one dashboard per user
-- **Fails** the doctor-as-patient use case
-- Would require separate accounts with different emails
-
-#### Option B: Separate User Tables Per Role
-
-- `patients` table, `doctors` table, etc. each with their own auth fields
-- Clean role-specific schemas
-- **Fails** the same problem — duplicate accounts needed
-- Login must check multiple tables
-- Wallet, KYC, NDPR compliance become messy (which account to delete?)
-
-#### Option C: Hybrid — Single User + Many-to-Many Roles + Per-Role Profiles (Recommended)
-
-```
-users (id, email, passwordHash, firstName, lastName, phone)     -- auth only, no role-specific fields
-user_roles (user_id, role)                                       -- many-to-many, a user can have multiple roles
-patient_profiles (user_id, dob, gender, allergies, blood_type)   -- created when patient role is added
-doctor_profiles (user_id, mdcn_license, specialties, fees)       -- created when doctor role is added
-lab_profiles (user_id, mlscn_license, test_categories)           -- created when lab role is added
-pharmacy_profiles (user_id, pcn_license, delivery_capabilities)  -- created when pharmacy role is added
-provider_onboarding (user_id, role, current_step, status)        -- onboarding tracked PER ROLE
-```
-
-**Advantages:**
-- One account, one email, one wallet, one KYC identity
-- Doctor registers as doctor, later adds patient role with simplified onboarding (KYC already done)
-- Role-specific data stays in dedicated profile tables (no schema bloat)
-- Login remains simple — authenticate against `users` table, return all roles
+## DD-002: Hospital as an Organization Entity — Doctor Affiliation Model
 - Frontend shows role switcher if user has multiple roles
 - NDPR compliance: one deletion request wipes everything
 - Wallet and payment history unified
@@ -142,11 +103,32 @@ provider_onboarding (user_id, role, current_step, status)        -- onboarding t
 
 ## DD-002: Hospital as an Organization Entity — Doctor Affiliation Model
 
-**Status:** OPEN
+**Status:** DECIDED
+**Decision:** Follow PRD — Hospital as Organization entity with organization_members table
 **Date Opened:** 2026-02-18
+**Date Decided:** 2026-02-19
 **Affects:** Auth module, onboarding, doctor profiles, emergency module, organization management
 **Blocking:** Task 9 (Provider Onboarding), Task 10 (Doctor Discovery), Task 17 (Emergency Services)
-**Related:** DD-001 (multi-role model)
+**Related:** DD-001 (multi-role model), DD-010 (Hospital-linked patients)
+
+### Decision
+
+Follow PRD — implement organizations with members:
+
+- Hospitals (and other facilities) are `organizations` table, not users
+- `organization_members` links users to organizations with roles (admin, doctor, pharmacist, etc.)
+- Doctors can be independent AND affiliated with multiple organizations
+- Hospital onboarding includes branches, staff, facility classification, discounts for enrolled patients
+- Provider Admin role manages organization, not a separate user type
+
+### Implementation
+
+Per PRD Hospital Onboarding Form:
+- Create `organizations` table with type (HOSPITAL, LAB_CHAIN, PHARMACY_CHAIN, CLINIC)
+- Create `organization_members` junction table
+- Hospital profile includes branches, bed capacity, departments, services
+- Doctor affiliation via organization_members
+- Hospital-linked patients via enrollment table (DD-010)
 
 ### Problem
 
@@ -353,7 +335,8 @@ The PRD confirms and expands on the hospital model significantly:
 
 ## DD-003: Missing Subscription/Payment Plan Model
 
-**Status:** OPEN
+**Status:** DECIDED
+**Decision:** Follow PRD — include patient subscription in onboarding flow
 **Date Opened:** 2026-02-18
 **Affects:** Auth module, onboarding, payments, wallet module
 **Blocking:** Task 3 (Auth), Task 15 (Wallet/Payments)
@@ -409,7 +392,8 @@ The PRD explicitly includes **patient subscription** as a core monetization mode
 
 ## DD-004: Missing Logistics/Delivery Provider Role
 
-**Status:** OPEN
+**Status:** DECIDED
+**Decision:** Defer implementation; add stubs to indicate presence and intent
 **Date Opened:** 2026-02-18
 **Affects:** Pharmacy module, lab module, onboarding, user roles
 **Blocking:** Task 14 (Pharmacy Services)
@@ -465,7 +449,8 @@ The current pharmacy delivery model is `PICKUP` or `USER_ARRANGED_DELIVERY` (the
 
 ## DD-005: Patient Onboarding — Missing PRD Fields and OTP Verification
 
-**Status:** OPEN
+**Status:** DECIDED
+**Decision:** Follow PRD — add all missing fields and implement multi-step OTP flow
 **Date Opened:** 2026-02-18
 **Affects:** Auth module, patient profile, onboarding flow
 **Blocking:** Task 3 (Auth), Task 7 (User Profiles)
@@ -532,7 +517,8 @@ PRD has Splash Screen and Welcome/Introduction (3 slides) — frontend-only conc
 
 ## DD-006: Provider Onboarding Forms — Missing Fields Per PRD
 
-**Status:** OPEN
+**Status:** DECIDED
+**Decision:** Follow PRD — add all ~25 missing document types to `DocumentType` enum and missing profile fields
 **Date Opened:** 2026-02-18
 **Affects:** All provider onboarding, shared interfaces, document types
 **Blocking:** Task 9 (Provider Onboarding)
@@ -665,11 +651,21 @@ This is a data model expansion, not an architectural decision. The interfaces an
 
 ## DD-007: Universal Compliance — Bank Accounts Table and TIN
 
-**Status:** OPEN
+**Status:** DECIDED
+**Decision:** Follow PRD — add bank_accounts table and TIN field per provider onboarding requirements
 **Date Opened:** 2026-02-18
+**Date Decided:** 2026-02-19
 **Affects:** Onboarding, payments, provider profiles
 **Blocking:** Task 9 (Provider Onboarding), Task 15 (Wallet/Payments)
 **Source:** PRD Section "Banking & Settlement" (all provider forms), PRD DB Schema Section 3
+
+### Implementation
+
+Per PRD:
+- Create `bank_accounts` table: id, user_id, bank_name, account_name, account_number, bvn, verification_status
+- Add TIN field to all organizational provider profiles (Lab, Pharmacy, Insurance, Hospital)
+- Add settlement/payout logic for provider payments
+- Bank account verification via BVN + account name matching
 
 ### Problem
 
@@ -706,7 +702,8 @@ Additionally, the PRD requires **TIN (Tax Identification Number)** for all organ
 
 ## DD-008: Admin Onboarding Verification Workflow — Expanded Per PRD
 
-**Status:** OPEN
+**Status:** DECIDED
+**Decision:** Follow PRD — expand verification workflow with risk scoring, site inspection, red flags
 **Date Opened:** 2026-02-18
 **Affects:** Admin module, provider onboarding
 **Blocking:** Task 9 (Provider Onboarding), Task 20 (Admin Portal)
@@ -780,7 +777,8 @@ PRD Section 8.2 defines an `audit_logs` table tracking: profile changes, documen
 
 ## DD-009: Patient Onboarding Flow — OTP vs Email and Subscription Gating
 
-**Status:** OPEN
+**Status:** DECIDED
+**Decision:** Follow PRD — implement multi-step OTP flow with subscription gating
 **Date Opened:** 2026-02-18
 **Affects:** Auth module, frontend onboarding
 **Blocking:** Task 3 (Auth), Task 22 (Frontend Auth UI)
@@ -836,7 +834,8 @@ This is a fundamental change to the auth flow and interacts with DD-003 (Subscri
 
 ## DD-010: Hospital-Linked Patients and Discount Model
 
-**Status:** OPEN
+**Status:** DECIDED
+**Decision:** Follow PRD — implement hospital enrollment with discount/free consultation model
 **Date Opened:** 2026-02-18
 **Affects:** Hospital module, consultation booking, patient profiles
 **Blocking:** Post DD-002 (Organization entity must exist first)
@@ -884,6 +883,249 @@ This implies:
 - PRD Hospital Section 8: WellBank Service Configuration
 - PRD Patient Section 5.3 Screen 8: "Linked Hospital"
 - Depends on DD-002 (Organization entity model)
+
+---
+
+## DD-011: Financial Ledger — Double-Entry Bookkeeping
+
+**Status:** DECIDED
+**Decision:** Full double-entry ledger (Option C)
+**Date Opened:** 2026-02-19
+**Date Decided:** 2026-02-19
+**Affects:** Wallet module, payments, settlements, compliance
+**Blocking:** Task 15 (Wallet/Payments), Task 9 (Provider Onboarding)
+**Related:** DD-007 (Bank Accounts for Settlements)
+
+### Decision
+
+Follow PRD explicitly — implement full double-entry bookkeeping. This provides:
+- Complete audit trail of all money movements
+- Built-in reconciliation capability
+- Proper split payment tracking
+- Provider payable accounts
+- Compliance with NDPR and Nigerian financial regulations
+- Future-proof for tax/reporting needs
+
+### Implementation Notes
+
+See the detailed analysis in the Problem, Tradeoffs, and Options sections above for implementation guidance.
+
+### What is a Ledger?
+
+A ledger (specifically double-entry bookkeeping) is a system where **every monetary transaction is recorded as two equal and opposite entries**: a **debit** and a **credit**. This ensures the fundamental accounting equation always holds:
+
+```
+Assets = Liabilities + Equity
+```
+
+Or in our context:
+```
+Wallet (Patient) + Platform Revenue + Provider Payables = Bank + Unearned Revenue
+```
+
+**Example — Patient pays ₦5,000 for consultation:**
+
+| Entry | Account | Debit | Credit |
+|-------|---------|-------|--------|
+| 1 | Patient Wallet | -₦5,000 | |
+| 2 | Platform Receivable | +₦5,000 | |
+| 3 | Provider Payable | | +₦4,000 |
+| 4 | Platform Revenue | | +₦1,000 |
+
+**Without a ledger (current model):**
+```javascript
+// Simple balance update
+wallet.balance -= 5000;  // Patient balance reduced
+// That's it. No trail of where the money went.
+```
+
+### Why It Matters for WellBank
+
+**1. Split Payments are Complex**
+
+The PRD specifies split payments:
+- Patient wallet → Consultation fee
+- Insurance → Covered portion
+- WellPoints → Discount redemption
+- Patient wallet (remaining) → Copay
+
+Each split requires tracking money movement. Without dual-entry, you can't verify the sums add up.
+
+**2. Provider Settlements — "What do we owe them?"**
+
+Doctors, labs, and pharmacies need to get paid. Without a ledger:
+- How much is WellBank holding for providers?
+- What's the payout schedule (daily/weekly)?
+- How do you handle disputes?
+
+A ledger tracks `Provider Payable` accounts per provider.
+
+**3. Reconciliation with BudPay**
+
+The design mentions `PAYMENT_RECONCILIATION` as a background job, but there's no data structure to match:
+- BudPay webhook events → Internal transaction records → Bank statement
+
+With a ledger, every external event creates matching entries that can be reconciled.
+
+**4. Refunds and Chargebacks**
+
+When a patient requests a refund:
+- Current: Just add money back to wallet
+- Ledger: Create reversal entries to undo the original transaction
+
+This matters for chargebacks — if a card payment is reversed, the platform needs to know it already paid the provider.
+
+**5. Compliance — NDPR + Nigerian Financial Regulations**
+
+- **NDPR**: Requires audit trails for data processing (includes financial data)
+- **CBN**: Digital payment regulations may require transaction records
+- **FIRS**: VAT remittance requires transaction records
+- **Audit**: Investors/board may require financial statements
+
+A ledger provides the authoritative record.
+
+### Tradeoffs
+
+| Aspect | Without Ledger | With Ledger |
+|--------|---------------|-------------|
+| Implementation time | Fast (1-2 days) | Moderate (1-2 weeks) |
+| Query complexity | Simple | Moderate (JOINs for balances) |
+| Debugging | Hard — "where did the money go?" | Easy — trail of entries |
+| Compliance | Weak | Strong |
+| Reconciliation | Manual | Automated |
+| Risk of bugs | High (money created/lost) | Low (debits = credits enforced) |
+| Refund handling | Ad-hoc | Structured reversals |
+
+### Options Considered
+
+#### Option A: No Ledger (Current)
+
+- Simple balance field on wallet
+- Transactions table with description
+- Fast to build
+- **Risk**: Hard to reconcile, no split payment clarity, weak compliance
+
+#### Option B: Immutable Transactions Only (Recommended for MVP)
+
+Keep the current `transactions` table but make it **immutable**:
+
+- Transactions can never be updated or deleted
+- Refunds create NEW transactions that reference the original
+- Add `reference_id` to link related transactions (original → refund)
+- Add explicit `split_details` JSON field for wallet + insurance + points
+
+```sql
+-- Transaction table with splits
+transactions (
+  id,
+  wallet_id,
+  type,           -- credit, debit, refund, payout
+  amount,
+  balance_before,
+  balance_after,
+  reference_id,   -- links to original transaction (for refunds)
+  split_details,  -- JSON: { wallet: 3000, insurance: 2000, points: 500 }
+  metadata,       -- JSON: service_type, service_id, provider_id
+  created_at
+)
+```
+
+**Tradeoff**: Still doesn't give you provider-level payables, but good for MVP.
+
+#### Option C: Full Double-Entry Ledger
+
+Separate `ledger_entries` table:
+
+```sql
+ledger_entries (
+  id,
+  entry_type,     -- patient_deposit, consultation_payment, provider_payout, etc.
+  debit_account,  -- wallet:patient_123, wallet:platform
+  credit_account, -- wallet:provider_456, revenue:consultation
+  amount,
+  reference_id,   -- links to consultation, order, etc.
+  created_at
+)
+```
+
+- Every payment creates 2+ entries
+- Balances are calculated via SUM (not stored)
+- Full accounting capability
+- **Tradeoff**: More complex queries, more data, but bulletproof
+
+### Recommendation
+
+**Option B (Immutable Transactions)** for MVP — it's a middle ground:
+
+1. Make transactions immutable (no UPDATE/DELETE)
+2. Add `reference_id` for refunds
+3. Add explicit `split_details` for multi-source payments
+4. Track provider payables in a simple `provider_payouts` table (not full ledger)
+5. Defer full double-entry until post-MVP or if compliance requires it
+
+This gives you audit trails and reconciliation ability without the full complexity of double-entry bookkeeping.
+
+### Open Questions
+
+- [ ] Does the business require financial statements? (If yes → Option C)
+- [ ] Are there CBN/Nigerian regulatory requirements for digital wallets that mandate ledger?
+- [ ] How do we handle provider payouts — do we hold funds (float) or pay immediately?
+- [ ] What's the refund policy? Full refund within X days?
+
+### References
+
+- PRD Section 9: "Monetization" — patient subscription, service transaction fees, provider commission
+- PRD Requirements: Wallet transaction history, split payments, fraud detection
+- Current `Wallet` interface: `shared/src/interfaces.ts:397-407`
+- Current `Transaction` interface: `shared/src/interfaces.ts:386-395`
+- Background job `PAYMENT_RECONCILIATION`: `shared/src/enums.ts:537`
+- DD-007: Bank Accounts for Settlements (depends on this decision)
+
+---
+
+## DD-012: Third-Party Integrations Deferral
+
+**Status:** DECIDED
+**Decision:** Defer all third-party integrations until core app is built; stubs are fine
+**Date Opened:** 2026-02-19
+**Affects:** All external integrations
+**Source:** Management Directive
+
+### Decision
+
+All third-party integrations are deferred until the core app is built:
+
+| Integration | Status | Notes |
+|------------|--------|-------|
+| **Dojah (KYC)** | Deferred | NIN/BVN/CAC verification - stub for now |
+| **BudPay (Payments)** | Deferred | Payment processing - stub for now |
+| **Logistics/Delivery** | Deferred | 3rd party delivery - stub for now |
+| **SMS (Notifications)** | Deferred | OTP, alerts - stub for now |
+| **Video (WebRTC/Agora)** | Deferred | Telehealth - stub for now |
+
+### Implementation
+
+All third-party integrations should have:
+1. **Stub service** that returns mock/success responses
+2. **Interface** ready for real implementation later
+3. **Flag** in config to toggle between stub and real
+
+Example:
+```typescript
+// Stub implementation
+class KycServiceStub implements IKycService {
+  async verifyNin(nin: string) {
+    return { verified: true, name: "Mock Name", dob: "1990-01-01" };
+  }
+}
+
+// Real implementation (for later)
+class KycServiceReal implements IKycService {
+  async verifyNin(nin: string) {
+    return await dojahClient.verifyNin(nin);
+  }
+}
+```
 
 ---
 
