@@ -1,5 +1,18 @@
 # WellBank Healthcare Platform - API Endpoints Specification
 
+## ⚠️ IMPORTANT: This spec reflects FINAL decisions as of 2026-02-19
+
+All product decisions follow the PRD. Technical implementations are finalized.
+
+**Key Changes from previous version:**
+- Multi-role user model (user can have multiple roles)
+- Organizations for hospitals/labs/pharmacies (not users)
+- OTP-based registration flow (10 steps)
+- Subscription required for patients
+- All 3rd-party integrations deferred (stubs only)
+
+---
+
 ## Overview
 
 This document provides a comprehensive specification of all API endpoints for the WellBank Healthcare Platform. It is designed for frontend developers using Lovable (or any frontend framework) to build the Next.js frontend with mock data while the backend is being developed.
@@ -46,11 +59,121 @@ This document provides a comprehensive specification of all API endpoints for th
 
 ## 1. Authentication Module
 
-### 1.1 Register User
+### Multi-Role Model Note
+- Users can have multiple roles: `patient`, `doctor`, `lab`, `pharmacy`, `insurance_provider`, `emergency_provider`, `wellbank_admin`, `provider_admin`
+- Login returns `roles: string[]` and `activeRole: string`
+- Frontend uses role switcher for multi-role users
 
-**Endpoint:** `POST /auth/register`
+### Organization Model Note
+- Hospitals/Labs/Pharmacies are **Organizations** (not users)
+- Users create and manage organizations
+- Organization Members link users to organizations
+- Login is always by USER, then switch to organization context
 
-**Description:** Register a new user account
+---
+
+### 1.1 Send OTP (Step 1 of Registration)
+
+**Endpoint:** `POST /auth/otp/send`
+
+**Description:** Send OTP to phone or email for verification
+
+**Authentication:** None
+
+**Request Body:**
+```json
+{
+  "type": "string (enum: phone, email, required)",
+  "destination": "string (phone number or email, required)"
+}
+```
+
+**Success Response (200 OK):**
+```json
+{
+  "status": "success",
+  "message": "OTP sent to [destination]",
+  "data": {
+    "otpId": "uuid",
+    "expiresAt": "ISO 8601 timestamp"
+  }
+}
+```
+
+---
+
+### 1.2 Verify OTP (Step 2 of Registration)
+
+**Endpoint:** `POST /auth/otp/verify`
+
+**Description:** Verify OTP and create account shell
+
+**Authentication:** None
+
+**Request Body:**
+```json
+{
+  "otpId": "uuid (required)",
+  "code": "string (6-digit OTP, required)"
+}
+```
+
+**Success Response (200 OK):**
+```json
+{
+  "status": "success",
+  "message": "OTP verified",
+  "data": {
+    "verificationToken": "string (temp token for next step)"
+  }
+}
+```
+
+---
+
+### 1.3 Complete Registration (Step 3-6 of Registration)
+
+**Endpoint:** `POST /auth/register/complete`
+
+**Description:** Complete registration with password and profile
+
+**Authentication:** None (requires verificationToken from OTP)
+
+**Request Body:**
+```json
+{
+  "verificationToken": "string (required)",
+  "password": "string (min 8 chars, required)",
+  "firstName": "string (required)",
+  "lastName": "string (required)",
+  "phoneNumber": "string (required)",
+  "role": "string (enum: patient, doctor, lab, pharmacy, insurance_provider, emergency_provider, required)"
+}
+```
+
+**Success Response (201 Created):**
+```json
+{
+  "status": "success",
+  "message": "Registration successful",
+  "data": {
+    "userId": "uuid",
+    "email": "string",
+    "roles": ["patient"],
+    "activeRole": "patient",
+    "needsOnboarding": true,
+    "createdAt": "ISO 8601 timestamp"
+  }
+}
+```
+
+---
+
+### 1.4 Login
+
+**Endpoint:** `POST /auth/login`
+
+**Description:** Authenticate user and receive access tokens
 
 **Authentication:** None
 
@@ -167,7 +290,8 @@ This document provides a comprehensive specification of all API endpoints for th
     "user": {
       "id": "uuid",
       "email": "string",
-      "role": "string",
+      "roles": ["patient", "doctor"],
+      "activeRole": "patient",
       "isVerified": true,
       "isKycVerified": true,
       "mfaEnabled": false
@@ -507,6 +631,160 @@ This document provides a comprehensive specification of all API endpoints for th
 
 ---
 
+## 1B. Organization Module (Hospitals, Labs, Pharmacies)
+
+> **Model:** Organizations are entities (Hospital, Lab, Pharmacy). Users create and manage organizations.
+> A user with `provider_admin` role creates an organization and invites members.
+
+### 1B.1 Create Organization
+
+**Endpoint:** `POST /organizations`
+
+**Description:** Create a new organization (hospital, lab, pharmacy)
+
+**Authentication:** Required (Bearer token, role: provider_admin)
+
+**Request Body:**
+```json
+{
+  "name": "string (required)",
+  "type": "string (enum: hospital, lab_chain, pharmacy_chain, clinic, required)",
+  "address": {
+    "street": "string",
+    "city": "string",
+    "state": "string",
+    "country": "string"
+  },
+  "phoneNumber": "string",
+  "email": "string"
+}
+```
+
+**Success Response (201 Created):**
+```json
+{
+  "status": "success",
+  "message": "Organization created successfully",
+  "data": {
+    "id": "uuid",
+    "name": "string",
+    "type": "hospital",
+    "status": "pending",
+    "createdAt": "ISO 8601 timestamp"
+  }
+}
+```
+
+### 1B.2 Get My Organizations
+
+**Endpoint:** `GET /organizations`
+
+**Description:** Get organizations the user belongs to
+
+**Authentication:** Required (Bearer token)
+
+**Success Response (200 OK):**
+```json
+{
+  "status": "success",
+  "data": {
+    "organizations": [
+      {
+        "id": "uuid",
+        "name": "string",
+        "type": "hospital",
+        "roleInOrg": "admin",
+        "status": "active"
+      }
+    ]
+  }
+}
+```
+
+### 1B.3 Add Organization Member
+
+**Endpoint:** `POST /organizations/:id/members`
+
+**Description:** Add a user to the organization
+
+**Authentication:** Required (Bearer token, org admin only)
+
+**Request Body:**
+```json
+{
+  "userId": "uuid (required)",
+  "roleInOrg": "string (enum: admin, doctor, pharmacist, lab_tech, receptionist)",
+  "department": "string (optional)"
+}
+```
+
+---
+
+## 1C. Subscription Module (Patient)
+
+> **Note:** Subscription is REQUIRED for patients before accessing the app.
+> All 3rd-party payment integrations are STUBBED for MVP.
+
+### 1C.1 Get Subscription Plans
+
+**Endpoint:** `GET /subscriptions/plans`
+
+**Description:** Get available subscription plans
+
+**Authentication:** None
+
+**Success Response (200 OK):**
+```json
+{
+  "status": "success",
+  "data": {
+    "plans": [
+      {
+        "id": "uuid",
+        "name": "Basic",
+        "price": 5000,
+        "billingCycle": "monthly",
+        "features": ["Consultations", "Lab Tests", "Pharmacy"]
+      }
+    ]
+  }
+}
+```
+
+### 1C.2 Subscribe
+
+**Endpoint:** `POST /subscriptions`
+
+**Description:** Subscribe to a plan
+
+**Authentication:** Required (Bearer token)
+
+**Request Body:**
+```json
+{
+  "planId": "uuid (required)",
+  "paymentMethod": "string (enum: wallet, card, bank_transfer)",
+  "paymentDetails": {}
+}
+```
+
+**Success Response (201 Created):**
+```json
+{
+  "status": "success",
+  "message": "Subscription activated",
+  "data": {
+    "subscriptionId": "uuid",
+    "planId": "uuid",
+    "status": "active",
+    "startDate": "ISO 8601 date",
+    "renewalDate": "ISO 8601 date"
+  }
+}
+```
+
+---
+
 ## 2. Patient Profile Module
 
 ### 2.1 Get Patient Profile
@@ -533,18 +811,27 @@ This document provides a comprehensive specification of all API endpoints for th
     "gender": "string (enum: male, female, other)",
     "phoneNumber": "string",
     "email": "string",
-    "identificationType": "string (enum: NIN, BVN)",
+    "nationality": "string",
+    "lga": "string",
+    "identificationType": "string (enum: NIN, BVN, VOTER_CARD, DRIVERS_LICENSE, PASSPORT)",
     "identificationNumber": "string",
     "isKycVerified": true,
     "kycLevel": "number (0-4)",
     "nin": "string",
     "bvn": "string",
+    "profilePhoto": "string (url)",
     "address": {
       "street": "string",
       "city": "string",
       "state": "string",
+      "lga": "string",
       "country": "string",
       "postalCode": "string"
+    },
+    "nextOfKin": {
+      "name": "string",
+      "phoneNumber": "string",
+      "relationship": "string"
     },
     "emergencyContacts": [
       {
@@ -556,6 +843,8 @@ This document provides a comprehensive specification of all API endpoints for th
     "allergies": ["string"],
     "chronicConditions": ["string"],
     "bloodType": "string (enum: A+, A-, B+, B-, AB+, AB-, O+, O-)",
+    "genotype": "string (enum: AA, AS, SS, AC)",
+    "currentMedications": ["string"],
     "ndprConsent": true,
     "dataProcessingConsent": true,
     "marketingConsent": false,

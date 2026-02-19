@@ -4,6 +4,25 @@ import { AuthGuard } from '@nestjs/passport';
 import { AuthService } from './auth.service';
 import { RegisterDto, LoginDto, AuthResponseDto, RefreshTokenDto, EnableMfaDto, RequestPasswordResetDto, ResetPasswordDto, VerifyEmailDto } from './dto/auth.dto';
 
+/**
+ * Authentication Controller
+ * 
+ * USER ROLES (3 + admin):
+ * - patient: Seeks healthcare services
+ * - doctor: Provides consultations (can be independent or org-affiliated)
+ * - provider_admin: Creates organizations (hospital/lab/pharmacy/etc)
+ * - wellbank_admin: Platform admin (seeded, see below)
+ * 
+ * ADMIN SEEDING:
+ * - Super admin bootstrapped on server deployment (seeded if not exists)
+ * - Super admin can create other admins via admin dashboard
+ * - Admins use separate credentials (company email)
+ * - Same login endpoint, returns wellbank_admin role
+ * 
+ * @see UserRole enum in shared/src/enums.ts
+ * @see OrganizationType for organization types
+ * @see OrganizationMemberRole for roles within organizations
+ */
 @ApiTags('authentication')
 @Controller('auth')
 export class AuthController {

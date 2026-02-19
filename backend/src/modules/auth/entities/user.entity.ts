@@ -1,6 +1,26 @@
 import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, UpdateDateColumn, OneToOne } from 'typeorm';
 import { UserRole, KycLevel, ProviderStatus } from '@wellbank/shared';
 
+/**
+ * User Entity
+ * 
+ * DESIGN DECISION - DEVIATION FROM PRD (see DD-001 in .kiro/specs/design-decisions.md):
+ * 
+ * PRD specifies user roles: patient, doctor, lab, pharmacy, insurance, emergency, admin
+ * 
+ * Our implementation:
+ * - User roles: patient, doctor, provider_admin, wellbank_admin
+ * - Labs, Pharmacies, Hospitals, Insurance, Emergency, Logistics = ORGANIZATIONS
+ * - provider_admin users create organizations and invite members
+ * - wellbank_admin is seeded (not self-registered) for security
+ * 
+ * Why:
+ * 1. Cleaner separation: people = users, businesses = organizations
+ * 2. Organizations can have branches
+ * 3. Staff roles scoped to organizations, not global
+ * 4. Simpler authentication - everyone logs in as a user
+ * 5. Security: admins are seeded, not self-registered
+ */
 @Entity('users')
 export class User {
   @PrimaryGeneratedColumn('uuid')
