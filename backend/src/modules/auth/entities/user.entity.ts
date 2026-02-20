@@ -1,4 +1,4 @@
-import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, UpdateDateColumn, OneToOne } from 'typeorm';
+import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, UpdateDateColumn, OneToMany } from 'typeorm';
 import { UserRole, KycLevel, ProviderStatus } from '@wellbank/shared';
 
 /**
@@ -41,8 +41,18 @@ export class User {
   @Column({ nullable: true })
   phoneNumber: string;
 
-  @Column({ type: 'enum', enum: UserRole, default: UserRole.PATIENT })
-  role: UserRole;
+  @Column({
+    type: 'simple-array',
+    default: UserRole.PATIENT
+  })
+  roles: UserRole[];
+
+  @Column({
+    type: 'enum',
+    enum: UserRole,
+    default: UserRole.PATIENT
+  })
+  activeRole: UserRole;
 
   @Column({ default: false })
   isEmailVerified: boolean;

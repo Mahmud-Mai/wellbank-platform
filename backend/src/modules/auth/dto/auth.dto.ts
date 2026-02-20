@@ -1,4 +1,4 @@
-import { IsEmail, IsString, MinLength, IsEnum, IsOptional, IsBoolean } from 'class-validator';
+import { IsEmail, IsString, MinLength, IsEnum, IsOptional, IsBoolean, IsArray } from 'class-validator';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { UserRole } from '@wellbank/shared';
 
@@ -67,8 +67,11 @@ export class AuthResponseDto {
   user: {
     id: string;
     email: string;
-    role: UserRole;
+    roles: UserRole[];
+    activeRole: UserRole;
     isKycVerified: boolean;
+    isEmailVerified: boolean;
+    mfaEnabled: boolean;
   };
 }
 
@@ -105,4 +108,56 @@ export class ResetPasswordDto {
   @IsString()
   @MinLength(8)
   newPassword: string;
+}
+
+// OTP-related DTOs for new registration flow
+export class SendOtpDto {
+  @ApiProperty({ enum: ['phone', 'email'] })
+  @IsEnum(['phone', 'email'])
+  type: 'phone' | 'email';
+
+  @ApiProperty({ example: '+2348012345678' })
+  @IsString()
+  destination: string;
+}
+
+export class VerifyOtpDto {
+  @ApiProperty()
+  @IsString()
+  otpId: string;
+
+  @ApiProperty({ example: '123456' })
+  @IsString()
+  code: string;
+}
+
+export class CompleteRegistrationDto {
+  @ApiProperty()
+  @IsString()
+  verificationToken: string;
+
+  @ApiProperty({ example: 'john@example.com' })
+  @IsEmail()
+  email: string;
+
+  @ApiProperty({ example: 'SecureP@ss123' })
+  @IsString()
+  @MinLength(8)
+  password: string;
+
+  @ApiProperty({ example: 'John' })
+  @IsString()
+  firstName: string;
+
+  @ApiProperty({ example: 'Doe' })
+  @IsString()
+  lastName: string;
+
+  @ApiProperty({ example: '+2348012345678' })
+  @IsString()
+  phoneNumber: string;
+
+  @ApiProperty({ enum: UserRole, example: UserRole.PATIENT })
+  @IsEnum(UserRole)
+  role: UserRole;
 }
