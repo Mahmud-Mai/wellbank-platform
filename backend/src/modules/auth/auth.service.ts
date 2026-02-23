@@ -5,7 +5,7 @@ import { JwtService } from '@nestjs/jwt';
 import { ConfigService } from '@nestjs/config';
 import * as bcrypt from 'bcryptjs';
 import { User } from './entities/user.entity';
-import { RegisterDto, LoginDto, AuthResponseDto, EnableMfaDto } from './dto/auth.dto';
+import { RegisterDto, LoginDto, AuthResponseDto, EnableMfaDto, SendOtpDto, VerifyOtpDto, CompleteRegistrationDto } from './dto/auth.dto';
 import { UserRole } from '@wellbank/shared';
 
 @Injectable()
@@ -31,8 +31,11 @@ export class AuthService {
     const user = this.userRepository.create({
       email: registerDto.email,
       passwordHash,
-      role: registerDto.role,
+      roles: [registerDto.role],
+      activeRole: registerDto.role,
       phoneNumber: registerDto.phoneNumber,
+      firstName: registerDto.firstName,
+      lastName: registerDto.lastName,
       ndprConsent: false,
       dataProcessingConsent: false,
       marketingConsent: false,
@@ -43,7 +46,8 @@ export class AuthService {
     return {
       id: user.id,
       email: user.email,
-      role: user.role,
+      roles: user.roles,
+      activeRole: user.activeRole,
     };
   }
 
@@ -89,7 +93,8 @@ export class AuthService {
     const payload = {
       sub: user.id,
       email: user.email,
-      role: user.role,
+      roles: user.roles,
+      activeRole: user.activeRole,
     };
 
     return {
@@ -102,8 +107,11 @@ export class AuthService {
       user: {
         id: user.id,
         email: user.email,
-        role: user.role,
+        roles: user.roles,
+        activeRole: user.activeRole,
         isKycVerified: user.isKycVerified,
+        isEmailVerified: user.isEmailVerified,
+        mfaEnabled: user.mfaEnabled,
       },
     };
   }
@@ -167,5 +175,66 @@ export class AuthService {
   async verifyEmail(token: string): Promise<{ message: string }> {
     // TODO: Implement actual email verification
     return { message: 'Email has been verified successfully' };
+  }
+
+  // OTP methods for new registration flow
+  async sendOtp(sendOtpDto: SendOtpDto): Promise<{ otpId: string; expiresAt: Date }> {
+    // TODO: Implement actual OTP sending (SMS/Email)
+    // For now, return mock data
+    const otpId = crypto.randomUUID();
+    const expiresAt = new Date(Date.now() + 10 * 60 * 1000); // 10 minutes
+
+    return { otpId, expiresAt };
+  }
+
+  async verifyOtp(verifyOtpDto: VerifyOtpDto): Promise<{ verificationToken: string }> {
+    // TODO: Implement actual OTP verification
+    // For now, accept any 6-digit code
+    if (verifyOtpDto.code.length !== 6) {
+      throw new BadRequestException('Invalid OTP code');
+    }
+
+    // Return a mock verification token
+    const verificationToken = crypto.randomUUID();
+
+    return { verificationToken };
+  }
+
+  async completeRegistration(completeDto: CompleteRegistrationDto): Promise<Partial<User>> {
+    // TODO: Verify the verificationToken properly
+    // For now, just create the user
+
+    const existingUser = await this.userRepository.findOne({
+      where: { email: completeDto.email },
+    });
+
+    if (existingUser) {
+      throw new ConflictException('User with this email already exists');
+    }
+
+    const passwordHash = await bcrypt.hash(completeDto.password, 12);
+
+    const user = this.userRepository.create({
+      email: completeDto.email,
+      passwordHash,
+      roles: [completeDto.role],
+      activeRole: completeDto.role,
+      phoneNumber: completeDto.phoneNumber,
+      firstName: completeDto.firstName,
+      lastName: completeDto.lastName,
+      isEmailVerified: true,
+      ndprConsent: false,
+      dataProcessingConsent: false,
+      marketingConsent: false,
+    });
+
+    await this.userRepository.save(user);
+
+    return {
+      id: user.id,
+      email: user.email,
+      roles: user.roles,
+      activeRole: user.activeRole,
+    };
   }
 }

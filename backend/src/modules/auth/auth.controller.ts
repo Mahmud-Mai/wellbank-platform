@@ -2,7 +2,7 @@ import { Controller, Post, Body, Get, UseGuards, Request, HttpCode, HttpStatus }
 import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth } from '@nestjs/swagger';
 import { AuthGuard } from '@nestjs/passport';
 import { AuthService } from './auth.service';
-import { RegisterDto, LoginDto, AuthResponseDto, RefreshTokenDto, EnableMfaDto, RequestPasswordResetDto, ResetPasswordDto, VerifyEmailDto } from './dto/auth.dto';
+import { RegisterDto, LoginDto, AuthResponseDto, RefreshTokenDto, EnableMfaDto, RequestPasswordResetDto, ResetPasswordDto, VerifyEmailDto, SendOtpDto, VerifyOtpDto, CompleteRegistrationDto } from './dto/auth.dto';
 
 /**
  * Authentication Controller
@@ -28,8 +28,46 @@ import { RegisterDto, LoginDto, AuthResponseDto, RefreshTokenDto, EnableMfaDto, 
 export class AuthController {
   constructor(private authService: AuthService) {}
 
+  // OTP-based registration flow
+  @Post('otp/send')
+  @ApiOperation({ summary: 'Send OTP to phone or email' })
+  @ApiResponse({ status: 200, description: 'OTP sent' })
+  async sendOtp(@Body() sendOtpDto: SendOtpDto) {
+    const result = await this.authService.sendOtp(sendOtpDto);
+    return {
+      status: 'success',
+      message: `OTP sent to ${sendOtpDto.destination}`,
+      data: result,
+    };
+  }
+
+  @Post('otp/verify')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Verify OTP and get verification token' })
+  @ApiResponse({ status: 200, description: 'OTP verified' })
+  async verifyOtp(@Body() verifyOtpDto: VerifyOtpDto) {
+    const result = await this.authService.verifyOtp(verifyOtpDto);
+    return {
+      status: 'success',
+      message: 'OTP verified',
+      data: result,
+    };
+  }
+
+  @Post('register/complete')
+  @ApiOperation({ summary: 'Complete registration after OTP verification' })
+  @ApiResponse({ status: 201, description: 'Registration successful' })
+  async completeRegistration(@Body() completeRegistrationDto: CompleteRegistrationDto) {
+    const user = await this.authService.completeRegistration(completeRegistrationDto);
+    return {
+      status: 'success',
+      message: 'Registration successful',
+      data: user,
+    };
+  }
+
   @Post('register')
-  @ApiOperation({ summary: 'Register a new user account' })
+  @ApiOperation({ summary: 'Register a new user account (legacy flow)' })
   @ApiResponse({ status: 201, description: 'User registered successfully' })
   @ApiResponse({ status: 409, description: 'User already exists' })
   async register(@Body() registerDto: RegisterDto) {
