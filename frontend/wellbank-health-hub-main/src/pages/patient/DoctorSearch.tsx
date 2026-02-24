@@ -25,7 +25,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { mockApi } from "@/lib/mock-api";
+import { mockApi, USE_REAL_API, doctorsApi } from "@/lib/auth-context";
 import { formatCurrency } from "@/lib/constants";
 import { SPECIALTIES } from "@/lib/constants";
 
@@ -47,18 +47,22 @@ const DoctorSearchPage = () => {
 
   const { data, isLoading } = useQuery({
     queryKey: ["doctors", search, specialty, maxFee, page],
-    queryFn: () =>
-      mockApi.doctors.search({
+    queryFn: () => {
+      const params = {
         search: search || undefined,
         specialty: specialty !== "all" ? specialty : undefined,
         maxFee: maxFee !== "all" ? Number(maxFee) : undefined,
         page,
-        perPage: 6,
-      }),
+        limit: 6,
+      };
+      return USE_REAL_API 
+        ? doctorsApi.search(params) 
+        : mockApi.doctors.search(params);
+    },
   });
 
-  const doctors = data?.data.doctors ?? [];
-  const pagination = data?.meta?.pagination;
+  const doctors = (data as any)?.data?.doctors ?? [];
+  const pagination = (data as any)?.meta?.pagination;
 
   return (
     <div className="space-y-6 p-4 pb-24 sm:p-6 lg:pb-6">

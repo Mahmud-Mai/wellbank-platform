@@ -13,8 +13,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { useToast } from "@/hooks/use-toast";
-import { useAuth } from "@/lib/auth-context";
-import { mockApi } from "@/lib/mock-api";
+import { useAuth, mockApi, USE_REAL_API, patientsApi } from "@/lib/auth-context";
 import { cn } from "@/lib/utils";
 import StepIndicator from "@/components/onboarding/StepIndicator";
 import MultiInput from "@/components/onboarding/MultiInput";
@@ -133,7 +132,7 @@ export default function PatientOnboarding() {
       const ins = insuranceForm.getValues();
       const v = verificationForm.getValues();
 
-      await mockApi.patients.completeProfile({
+      const patientData = {
         firstName: p.firstName, lastName: p.lastName,
         phoneNumber: p.phoneNumber, email: p.email,
         dateOfBirth: dateOfBirth ? format(dateOfBirth, "yyyy-MM-dd") : "",
@@ -142,10 +141,18 @@ export default function PatientOnboarding() {
         nextOfKin: { name: n.nokName, phoneNumber: n.nokPhone, relationship: n.nokRelationship },
         bloodType: h.bloodType, genotype: h.genotype,
         allergies, chronicConditions: conditions, currentMedications: medications,
-        insuranceProvider: ins.insuranceProvider, insurancePolicyNumber: ins.insurancePolicyNumber,
-        insuranceExpiryDate: insuranceExpiryDate ? format(insuranceExpiryDate, "yyyy-MM-dd") : undefined,
-        idType: v.idType as any,
-      });
+        insurance: ins.insuranceProvider ? {
+          provider: ins.insuranceProvider,
+          policyNumber: ins.insurancePolicyNumber,
+          expiryDate: insuranceExpiryDate ? format(insuranceExpiryDate, "yyyy-MM-dd") : undefined,
+        } : undefined,
+      };
+
+      if (USE_REAL_API) {
+        await patientsApi.completeProfile(patientData);
+      } else {
+        await mockApi.patients.completeProfile(patientData);
+      }
 
       toast({ title: "Profile Completed! ✅", description: "Your patient profile is approved." });
       if (isAddingRole) {

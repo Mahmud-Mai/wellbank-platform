@@ -15,8 +15,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { useToast } from "@/hooks/use-toast";
-import { useAuth } from "@/lib/auth-context";
-import { mockApi } from "@/lib/mock-api";
+import { useAuth, mockApi, USE_REAL_API, doctorsApi } from "@/lib/auth-context";
 import { cn } from "@/lib/utils";
 import StepIndicator from "@/components/onboarding/StepIndicator";
 import MultiInput from "@/components/onboarding/MultiInput";
@@ -133,7 +132,7 @@ export default function DoctorOnboarding() {
       const id = idForm.getValues();
       const b = bankForm.getValues();
 
-      await mockApi.doctors.completeProfile({
+      const doctorData = {
         firstName: p.firstName, lastName: p.lastName, phoneNumber: p.phoneNumber, email: p.email,
         dateOfBirth: dateOfBirth ? format(dateOfBirth, "yyyy-MM-dd") : "", gender: p.gender,
         address: { street: p.street, city: p.city, state: p.state, lga: p.lga, country: "Nigeria" },
@@ -141,8 +140,14 @@ export default function DoctorOnboarding() {
         consultationTypes, hospitalAffiliations, consultationFee: pr.consultationFee, bio: pr.bio,
         mdcnLicenseNumber: c.mdcnLicenseNumber, practicingLicenseExpiry: practicingLicenseExpiry ? format(practicingLicenseExpiry, "yyyy-MM-dd") : "",
         bankName: b.bankName, accountName: b.accountName, accountNumber: b.accountNumber, bvn: b.bvn,
-        governmentIdType: id.governmentIdType as any,
-      });
+        governmentIdNumber: id.governmentIdNumber,
+      };
+
+      if (USE_REAL_API) {
+        await doctorsApi.completeProfile(doctorData);
+      } else {
+        await mockApi.doctors.completeProfile(doctorData);
+      }
 
       toast({ title: "Profile Submitted! ✅", description: "Your profile is under review." });
       if (isAddingRole) {

@@ -43,7 +43,7 @@ import {
 } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
 import { toast } from "sonner";
-import { mockApi } from "@/lib/mock-api";
+import { mockApi, USE_REAL_API, doctorsApi } from "@/lib/auth-context";
 import { formatCurrency } from "@/lib/constants";
 
 const dayNames = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
@@ -66,7 +66,9 @@ const DoctorProfilePage = () => {
 
   const { data, isLoading } = useQuery({
     queryKey: ["doctor", id],
-    queryFn: () => mockApi.doctors.getById(id!),
+    queryFn: () => USE_REAL_API 
+      ? doctorsApi.getById(id!) 
+      : mockApi.doctors.getById(id!),
     enabled: !!id,
   });
 

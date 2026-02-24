@@ -12,8 +12,7 @@ import { Switch } from "@/components/ui/switch";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
-import { useAuth } from "@/lib/auth-context";
-import { mockApi } from "@/lib/mock-api";
+import { useAuth, mockApi, USE_REAL_API, organizationsApi } from "@/lib/auth-context";
 import StepIndicator from "@/components/onboarding/StepIndicator";
 import MultiInput from "@/components/onboarding/MultiInput";
 import FileUpload from "@/components/onboarding/FileUpload";
@@ -137,7 +136,7 @@ export default function NewOrganization() {
       const bank = bankForm.getValues();
       const comp = complianceForm.getValues();
 
-      await mockApi.organizations.create({
+      const orgData = {
         name: b.name, type: b.type as OrganizationType, description: b.description,
         email: b.email, phoneNumber: b.phoneNumber, contactPerson: b.contactPerson,
         address: { street: b.street, city: b.city, state: b.state, lga: b.lga, country: "Nigeria" },
@@ -145,15 +144,21 @@ export default function NewOrganization() {
         bankName: bank.bankName, accountName: bank.accountName,
         accountNumber: bank.accountNumber, bvn: bank.bvn,
         settlementFrequency: bank.settlementFrequency,
-        dataPrivacyAgreed: comp.dataPrivacyAgreed, termsAccepted: comp.termsAccepted,
-        antiFraudDeclared: comp.antiFraudDeclared, slaAccepted: comp.slaAccepted,
+        ndprConsent: comp.dataPrivacyAgreed, termsAccepted: comp.termsAccepted,
+        antiFraudDeclaration: comp.antiFraudDeclared, slaAccepted: comp.slaAccepted,
         services, departments, hmosAccepted,
         hasOperatingTheatre, hasICU, hasPharmacy, hasLaboratory, hasAmbulance,
         hasEmergencyRoom, is24Hours, acceptsInsurance,
-        homeSampleCollection, deliveryAvailable, coldChainCapability, handlesControlledDrugs,
-        gpsTracking, coldChainDelivery, sameDayDelivery, apiEnabled,
+        hasHomeSampleCollection: homeSampleCollection, hasDelivery: deliveryAvailable, hasColdChain: coldChainCapability, handlesControlledDrugs,
+        hasGpsTracking: gpsTracking, hasColdChainDelivery: coldChainDelivery, hasSameDayDelivery: sameDayDelivery, hasApiIntegration: apiEnabled,
         productTypes, vehicleTypes, ambulanceTypes,
-      });
+      };
+
+      if (USE_REAL_API) {
+        await organizationsApi.create(orgData);
+      } else {
+        await mockApi.organizations.create(orgData);
+      }
 
       toast({ title: "Organization Created! 🏥", description: "Status: Pending Review" });
       if (isAddingRole) {

@@ -36,7 +36,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { toast } from "sonner";
-import { mockApi } from "@/lib/mock-api";
+import { mockApi, USE_REAL_API, patientsApi } from "@/lib/auth-context";
 import { formatDate, BLOOD_TYPES, GENOTYPES, GENDERS, REGIONS } from "@/lib/constants";
 import type { PatientProfile as PatientProfileType } from "@/lib/types";
 
@@ -90,13 +90,20 @@ const PatientProfilePage = () => {
   const queryClient = useQueryClient();
   const [editing, setEditing] = useState(false);
 
+  const getPatientProfile = () => USE_REAL_API 
+    ? patientsApi.getProfile() as Promise<{ data: PatientProfileType }>
+    : mockApi.patients.getProfile() as Promise<{ data: PatientProfileType }>;
+
   const { data, isLoading } = useQuery({
     queryKey: ["patient-profile"],
-    queryFn: () => mockApi.patients.getProfile(),
+    queryFn: getPatientProfile,
   });
 
   const updateMutation = useMutation({
-    mutationFn: (data: Partial<PatientProfileType>) => mockApi.patients.updateProfile(data),
+    mutationFn: (data: Partial<PatientProfileType>) => 
+      USE_REAL_API 
+        ? patientsApi.updateProfile(data) as Promise<{ data: PatientProfileType }>
+        : mockApi.patients.updateProfile(data) as Promise<{ data: PatientProfileType }>,
     onSuccess: () => {
       toast.success("Profile updated successfully");
       queryClient.invalidateQueries({ queryKey: ["patient-profile"] });
