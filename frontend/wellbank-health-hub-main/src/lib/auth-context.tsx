@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useState, useEffect, useCallback } from "react";
-import type { User } from "./types";
+import type { User, UserRole } from "./types";
 import { mockApi } from "./mock-api";
 
 interface AuthState {
@@ -11,23 +11,23 @@ interface AuthState {
 interface AuthContextType extends AuthState {
   login: (email: string, password: string) => Promise<void>;
   register: (data: {
-    email: string;
+    verificationToken: string;
     password: string;
-    role: string;
     firstName: string;
     lastName: string;
     phoneNumber: string;
+    role: "patient" | "doctor" | "provider_admin";
   }) => Promise<void>;
   logout: () => void;
+  switchRole: (role: UserRole) => Promise<void>;
+  addRole: (role: UserRole) => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 const STORAGE_KEY = "wellbank_auth";
 
-export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
-  children,
-}) => {
+export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [state, setState] = useState<AuthState>({
     user: null,
     isAuthenticated: false,
@@ -58,23 +58,25 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
 
   const register = useCallback(
     async (data: {
-      email: string;
+      verificationToken: string;
       password: string;
-      role: string;
       firstName: string;
       lastName: string;
       phoneNumber: string;
+      role: "patient" | "doctor" | "provider_admin";
     }) => {
-      await mockApi.auth.register(data);
-      // After registration, log them in
+      const res = await mockApi.auth.completeRegistration(data);
       const user: User = {
-        id: "u-new-001",
-        email: data.email,
-        role: data.role as User["role"],
+        id: res.data.userId,
+        email: "",
+        roles: res.data.roles as UserRole[],
+        activeRole: res.data.activeRole as UserRole,
         firstName: data.firstName,
         lastName: data.lastName,
+        isVerified: true,
         isKycVerified: false,
         kycLevel: 0,
+        mfaEnabled: false,
       };
       localStorage.setItem(STORAGE_KEY, JSON.stringify(user));
       setState({ user, isAuthenticated: true, isLoading: false });
@@ -87,8 +89,29 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
     setState({ user: null, isAuthenticated: false, isLoading: false });
   }, []);
 
+  const switchRole = useCallback(async (role: UserRole) => {
+    await mockApi.users.switchRole(role);
+    setState((prev) => {
+      if (!prev.user) return prev;
+      const updated = { ...prev.user, activeRole: role };
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(updated));
+      return { ...prev, user: updated };
+    });
+  }, []);
+
+  const addRole = useCallback(async (role: UserRole) => {
+    await mockApi.users.addRole(role);
+    setState((prev) => {
+      if (!prev.user) return prev;
+      const newRoles = prev.user.roles.includes(role) ? prev.user.roles : [...prev.user.roles, role];
+      const updated = { ...prev.user, roles: newRoles };
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(updated));
+      return { ...prev, user: updated };
+    });
+  }, []);
+
   return (
-    <AuthContext.Provider value={{ ...state, login, register, logout }}>
+    <AuthContext.Provider value={{ ...state, login, register, logout, switchRole, addRole }}>
       {children}
     </AuthContext.Provider>
   );

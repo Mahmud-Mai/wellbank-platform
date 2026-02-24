@@ -9,15 +9,27 @@ import {
   Star,
   Settings,
   LogOut,
-  Heart,
   Bell,
+  User,
+  ChevronDown,
+  Plus,
 } from "lucide-react";
 import { useAuth } from "@/lib/auth-context";
 import BottomNav from "./BottomNav";
 import wellbankLogo from "@/assets/wellbank-logo.jpeg";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+  DropdownMenuSeparator,
+  DropdownMenuLabel,
+} from "@/components/ui/dropdown-menu";
+import { Badge } from "@/components/ui/badge";
 
 const sidebarLinks = [
   { icon: Home, label: "Dashboard", href: "/dashboard" },
+  { icon: User, label: "Profile", href: "/profile" },
   { icon: Stethoscope, label: "Consultations", href: "/consultations" },
   { icon: FlaskConical, label: "Lab Tests", href: "/labs" },
   { icon: Pill, label: "Pharmacy", href: "/pharmacy" },
@@ -28,8 +40,15 @@ const sidebarLinks = [
   { icon: Settings, label: "Settings", href: "/settings" },
 ];
 
+const roleLabels: Record<string, string> = {
+  patient: "Patient",
+  doctor: "Doctor",
+  provider_admin: "Provider Admin",
+  wellbank_admin: "Admin",
+};
+
 const PatientLayout = () => {
-  const { isAuthenticated, isLoading, user, logout } = useAuth();
+  const { isAuthenticated, isLoading, user, logout, switchRole } = useAuth();
   const { pathname } = useLocation();
 
   if (isLoading) {
@@ -74,6 +93,43 @@ const PatientLayout = () => {
           })}
         </nav>
         <div className="border-t border-sidebar-border p-4">
+          {/* Role Switcher */}
+          {user && (user.roles.length > 1 || user.roles.length < 3) && (
+            <DropdownMenu>
+              <DropdownMenuTrigger className="mb-3 flex w-full items-center justify-between rounded-lg bg-sidebar-accent px-3 py-2 text-sm">
+                <span className="flex items-center gap-2">
+                  <Badge variant="outline" className="text-[10px]">{roleLabels[user.activeRole]}</Badge>
+                  <span className="text-xs text-muted-foreground">Active Role</span>
+                </span>
+                <ChevronDown className="h-3.5 w-3.5 text-muted-foreground" />
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="start" className="w-56">
+                <DropdownMenuLabel>Switch Role</DropdownMenuLabel>
+                <DropdownMenuSeparator />
+                {user.roles.map((role) => (
+                  <DropdownMenuItem
+                    key={role}
+                    onClick={() => switchRole(role)}
+                    className={role === user.activeRole ? "bg-primary/10 text-primary" : ""}
+                  >
+                    {roleLabels[role]}
+                    {role === user.activeRole && <span className="ml-auto text-xs">✓</span>}
+                  </DropdownMenuItem>
+                ))}
+                {user.roles.length < 3 && (
+                  <>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem asChild>
+                      <Link to="/add-role" className="flex items-center gap-2">
+                        <Plus className="h-3.5 w-3.5" /> Add New Role
+                      </Link>
+                    </DropdownMenuItem>
+                  </>
+                )}
+              </DropdownMenuContent>
+            </DropdownMenu>
+          )}
+
           <div className="mb-3 flex items-center gap-3 px-3">
             <div className="flex h-9 w-9 items-center justify-center rounded-full bg-primary/10 text-sm font-medium text-primary">
               {user?.firstName?.[0]}{user?.lastName?.[0]}

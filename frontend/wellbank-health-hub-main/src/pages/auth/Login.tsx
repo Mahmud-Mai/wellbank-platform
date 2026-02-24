@@ -3,12 +3,13 @@ import { useNavigate, Link } from "react-router-dom";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { Heart, Mail, Lock, Loader2, ArrowRight } from "lucide-react";
+import { Mail, Lock, Loader2, ArrowRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/lib/auth-context";
+import wellbankLogo from "@/assets/wellbank-logo.jpeg";
 
 const loginSchema = z.object({
   email: z.string().trim().email("Invalid email").max(255),
@@ -53,9 +54,7 @@ const Login = () => {
       {/* Left branding panel */}
       <div className="hidden w-[420px] shrink-0 flex-col justify-between gradient-primary p-10 lg:flex">
         <Link to="/" className="flex items-center gap-2">
-          <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary-foreground/20">
-            <Heart className="h-5 w-5 text-primary-foreground" />
-          </div>
+          <img src={wellbankLogo} alt="WellBank" className="h-9 w-9 rounded-lg object-cover" />
           <span className="text-xl font-bold text-primary-foreground">WellBank</span>
         </Link>
         <div>
@@ -74,7 +73,7 @@ const Login = () => {
         {/* Mobile header */}
         <div className="flex items-center justify-between border-b border-border p-4 lg:hidden">
           <Link to="/" className="flex items-center gap-2">
-            <Heart className="h-5 w-5 text-primary" />
+            <img src={wellbankLogo} alt="WellBank" className="h-7 w-7 rounded object-cover" />
             <span className="font-bold text-foreground">WellBank</span>
           </Link>
         </div>
