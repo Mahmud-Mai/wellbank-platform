@@ -20,6 +20,7 @@ interface AuthContextType extends AuthState {
   }) => Promise<void>;
   logout: () => void;
   switchRole: (role: UserRole) => Promise<void>;
+  addRole: (role: UserRole) => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -98,8 +99,19 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     });
   }, []);
 
+  const addRole = useCallback(async (role: UserRole) => {
+    await mockApi.users.addRole(role);
+    setState((prev) => {
+      if (!prev.user) return prev;
+      const newRoles = prev.user.roles.includes(role) ? prev.user.roles : [...prev.user.roles, role];
+      const updated = { ...prev.user, roles: newRoles };
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(updated));
+      return { ...prev, user: updated };
+    });
+  }, []);
+
   return (
-    <AuthContext.Provider value={{ ...state, login, register, logout, switchRole }}>
+    <AuthContext.Provider value={{ ...state, login, register, logout, switchRole, addRole }}>
       {children}
     </AuthContext.Provider>
   );

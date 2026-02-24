@@ -32,6 +32,7 @@ export interface User {
   isKycVerified: boolean;
   kycLevel: number;
   mfaEnabled: boolean;
+  needsOnboarding?: boolean;
 }
 
 export interface AuthTokens {
@@ -98,6 +99,7 @@ export interface PatientProfile {
     isActive: boolean;
   };
   createdAt: string;
+  verificationStatus?: VerificationStatusType;
 }
 
 // ─── Wallet ───
@@ -225,6 +227,7 @@ export interface Organization {
   email?: string;
   status: "pending" | "active" | "suspended";
   roleInOrg?: OrgMemberRole;
+  verificationStatus?: VerificationStatusType;
 }
 
 // ─── Subscription ───
@@ -259,4 +262,156 @@ export interface ApiResponse<T> {
       totalPages: number;
     };
   };
+}
+
+// ─── Verification Status ───
+export type VerificationStatusType = "PENDING" | "UNDER_REVIEW" | "APPROVED" | "REJECTED";
+
+// ─── Document Upload ───
+export interface DocumentUpload {
+  id: string;
+  type: string;
+  fileName: string;
+  fileUrl: string;
+  status: VerificationStatusType;
+  uploadedAt: string;
+}
+
+// ─── Patient Onboarding ───
+export interface PatientOnboardingData {
+  // Personal
+  firstName: string;
+  lastName: string;
+  phoneNumber: string;
+  email: string;
+  dateOfBirth: string;
+  gender: "male" | "female" | "other";
+  nationality: string;
+  nin?: string;
+  address: Address;
+  // Next of Kin
+  nextOfKin: NextOfKin;
+  // Health
+  bloodType?: string;
+  genotype?: string;
+  allergies: string[];
+  chronicConditions: string[];
+  currentMedications: string[];
+  // Insurance
+  insuranceProvider?: string;
+  insurancePolicyNumber?: string;
+  insuranceExpiryDate?: string;
+  // KYC
+  idType?: IdentificationType;
+}
+
+// ─── Doctor Onboarding ───
+export interface DoctorOnboardingData {
+  // Personal
+  firstName: string;
+  lastName: string;
+  phoneNumber: string;
+  email: string;
+  dateOfBirth: string;
+  gender: "male" | "female" | "other";
+  address: Address;
+  // Professional
+  specialty: string;
+  subSpecialty?: string;
+  yearsExperience: number;
+  consultationTypes: string[];
+  hospitalAffiliations: string[];
+  consultationFee: number;
+  bio: string;
+  // Certifications
+  mdcnLicenseNumber: string;
+  practicingLicenseExpiry: string;
+  // Banking
+  bankName: string;
+  accountName: string;
+  accountNumber: string;
+  bvn: string;
+  // KYC
+  governmentIdType?: IdentificationType;
+}
+
+// ─── Organization Data ───
+export interface OrganizationData {
+  // Common
+  name: string;
+  type: OrganizationType;
+  description: string;
+  email: string;
+  phoneNumber: string;
+  contactPerson: string;
+  address: Address;
+  cacNumber: string;
+  tin: string;
+  // Banking
+  bankName: string;
+  accountName: string;
+  accountNumber: string;
+  bvn: string;
+  settlementFrequency: "daily" | "weekly";
+  // Compliance
+  dataPrivacyAgreed: boolean;
+  termsAccepted: boolean;
+  antiFraudDeclared: boolean;
+  slaAccepted: boolean;
+  // Type-specific (optional)
+  ownershipType?: string;
+  yearEstablished?: number;
+  facilityType?: string;
+  bedCapacity?: number;
+  consultingRooms?: number;
+  hasOperatingTheatre?: boolean;
+  hasICU?: boolean;
+  hasPharmacy?: boolean;
+  hasLaboratory?: boolean;
+  hasAmbulance?: boolean;
+  hasEmergencyRoom?: boolean;
+  is24Hours?: boolean;
+  services?: string[];
+  departments?: string[];
+  averagePatientVolumeDaily?: number;
+  consultationFeeRange?: string;
+  acceptsInsurance?: boolean;
+  hmosAccepted?: string[];
+  nhiaNumber?: string;
+  medicalDirectorName?: string;
+  medicalDirectorMdcn?: string;
+  // Lab
+  homeSampleCollection?: boolean;
+  chiefLabScientistName?: string;
+  chiefLabScientistMlsn?: string;
+  // Pharmacy
+  superintendentPharmacistName?: string;
+  superintendentPharmacistLicense?: string;
+  deliveryAvailable?: boolean;
+  coldChainCapability?: boolean;
+  handlesControlledDrugs?: boolean;
+  // Insurance
+  naicomNumber?: string;
+  productTypes?: string[];
+  coverageScope?: string;
+  apiEnabled?: boolean;
+  claimsTurnaroundDays?: number;
+  // Emergency
+  coverageArea?: string;
+  ambulanceCount?: number;
+  ambulanceTypes?: string[];
+  gpsTracking?: boolean;
+  averageResponseTime?: string;
+  // Logistics
+  vehicleTypes?: string[];
+  coldChainDelivery?: boolean;
+  sameDayDelivery?: boolean;
+}
+
+// ─── Bank Account Input ───
+export interface BankAccountInput {
+  bankName: string;
+  accountName: string;
+  accountNumber: string;
+  bvn: string;
 }

@@ -406,6 +406,14 @@ export const mockApi = {
       await delay();
       return { status: "success" as const, message: "Profile updated", data: { ...mockPatient, ...data } };
     },
+    completeProfile: async (_data: any) => {
+      await delay(800);
+      return { status: "success" as const, message: "Profile completed", data: { verificationStatus: "APPROVED" } };
+    },
+    uploadDocument: async (_type: string, _file: File) => {
+      await delay(600);
+      return { status: "success" as const, message: "Document uploaded", data: { id: "doc-" + Date.now(), status: "PENDING" } };
+    },
   },
   wallet: {
     get: async () => {
@@ -517,6 +525,14 @@ export const mockApi = {
     },
   },
   doctors: {
+    completeProfile: async (_data: any) => {
+      await delay(800);
+      return { status: "success" as const, message: "Doctor profile submitted", data: { verificationStatus: "PENDING" } };
+    },
+    uploadDocument: async (_type: string, _file: File) => {
+      await delay(600);
+      return { status: "success" as const, message: "Document uploaded", data: { id: "doc-" + Date.now(), status: "PENDING" } };
+    },
     search: async (params?: { specialty?: string; location?: string; minRating?: number; maxFee?: number; search?: string; page?: number; perPage?: number }) => {
       await delay();
       let filtered = mockDoctors;
@@ -556,6 +572,20 @@ export const mockApi = {
       message: "Consultation booked",
       data: { consultationId: "c-new-" + Date.now(), status: "scheduled", fee: doctor?.consultationFee ?? 5000 },
     };
+  },
+  organizations: {
+    create: async (_data: any) => {
+      await delay(1000);
+      return { status: "success" as const, message: "Organization created", data: { id: "org-" + Date.now(), status: "pending", verificationStatus: "PENDING" } };
+    },
+    list: async () => {
+      await delay();
+      return { status: "success" as const, message: "Organizations retrieved", data: { organizations: [] } };
+    },
+    getById: async (_id: string) => {
+      await delay();
+      return { status: "success" as const, message: "Organization retrieved", data: null };
+    },
   },
   // Stubs for 3rd party integrations
   kyc: {

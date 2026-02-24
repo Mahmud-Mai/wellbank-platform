@@ -12,6 +12,7 @@ import {
   Bell,
   User,
   ChevronDown,
+  Plus,
 } from "lucide-react";
 import { useAuth } from "@/lib/auth-context";
 import BottomNav from "./BottomNav";
@@ -93,7 +94,7 @@ const PatientLayout = () => {
         </nav>
         <div className="border-t border-sidebar-border p-4">
           {/* Role Switcher */}
-          {user && user.roles.length > 1 && (
+          {user && (user.roles.length > 1 || user.roles.length < 3) && (
             <DropdownMenu>
               <DropdownMenuTrigger className="mb-3 flex w-full items-center justify-between rounded-lg bg-sidebar-accent px-3 py-2 text-sm">
                 <span className="flex items-center gap-2">
@@ -115,6 +116,16 @@ const PatientLayout = () => {
                     {role === user.activeRole && <span className="ml-auto text-xs">✓</span>}
                   </DropdownMenuItem>
                 ))}
+                {user.roles.length < 3 && (
+                  <>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem asChild>
+                      <Link to="/add-role" className="flex items-center gap-2">
+                        <Plus className="h-3.5 w-3.5" /> Add New Role
+                      </Link>
+                    </DropdownMenuItem>
+                  </>
+                )}
               </DropdownMenuContent>
             </DropdownMenu>
           )}

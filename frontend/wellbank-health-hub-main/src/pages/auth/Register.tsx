@@ -151,9 +151,13 @@ const Register = () => {
       });
       toast({
         title: "Welcome to WellBank! 🎉",
-        description: "Your account has been created successfully.",
+        description: "Let's complete your profile.",
       });
-      navigate("/dashboard");
+      // Redirect to role-specific onboarding
+      if (selectedRole === "patient") navigate("/onboarding/patient");
+      else if (selectedRole === "doctor") navigate("/onboarding/doctor");
+      else if (selectedRole === "provider_admin") navigate("/organization/new");
+      else navigate("/dashboard");
     } catch {
       toast({ title: "Registration failed", variant: "destructive" });
     } finally {
