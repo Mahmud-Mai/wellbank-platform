@@ -1,7 +1,6 @@
 import { Link } from "react-router-dom";
 import { motion } from "framer-motion";
 import {
-  Heart,
   Stethoscope,
   FlaskConical,
   Pill,
@@ -11,6 +10,8 @@ import {
   Wallet,
   Star,
   Zap,
+  User,
+  Building2,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import heroBg from "@/assets/hero-bg.jpg";
@@ -20,64 +21,30 @@ const roles = [
   {
     title: "Patient",
     description: "Find doctors, book tests, order medication",
-    icon: Heart,
+    icon: User,
     href: "/register?role=patient",
-    accent: "primary",
   },
   {
     title: "Doctor",
     description: "Manage consultations and grow your practice",
     icon: Stethoscope,
     href: "/register?role=doctor",
-    accent: "primary",
   },
   {
-    title: "Laboratory",
-    description: "Receive test requests and deliver results",
-    icon: FlaskConical,
-    href: "/register?role=lab",
-    accent: "primary",
-  },
-  {
-    title: "Pharmacy",
-    description: "Fulfill prescriptions and deliver medicines",
-    icon: Pill,
-    href: "/register?role=pharmacy",
-    accent: "primary",
+    title: "Provider Admin",
+    description: "Create and manage healthcare organizations",
+    icon: Building2,
+    href: "/register?role=provider_admin",
   },
 ];
 
 const features = [
-  {
-    icon: Stethoscope,
-    title: "Doctor Discovery",
-    description: "Find specialists, book video or in-person consultations",
-  },
-  {
-    icon: FlaskConical,
-    title: "Lab Tests",
-    description: "Order tests with home sample collection",
-  },
-  {
-    icon: Pill,
-    title: "Pharmacy",
-    description: "Order medication with doorstep delivery",
-  },
-  {
-    icon: Wallet,
-    title: "Digital Wallet",
-    description: "One wallet for all healthcare payments",
-  },
-  {
-    icon: Shield,
-    title: "Insurance",
-    description: "Link policies for seamless coverage",
-  },
-  {
-    icon: Ambulance,
-    title: "Emergency",
-    description: "One-tap ambulance dispatch with GPS tracking",
-  },
+  { icon: Stethoscope, title: "Doctor Discovery", description: "Find specialists, book video or in-person consultations" },
+  { icon: FlaskConical, title: "Lab Tests", description: "Order tests with home sample collection" },
+  { icon: Pill, title: "Pharmacy", description: "Order medication with doorstep delivery" },
+  { icon: Wallet, title: "Digital Wallet", description: "One wallet for all healthcare payments" },
+  { icon: Shield, title: "Insurance", description: "Link policies for seamless coverage" },
+  { icon: Ambulance, title: "Emergency", description: "One-tap ambulance dispatch with GPS tracking" },
 ];
 
 const fadeUp = {
@@ -115,20 +82,12 @@ const Landing = () => {
       {/* Hero */}
       <section className="relative flex min-h-screen items-center overflow-hidden pt-16">
         <div className="absolute inset-0 z-0">
-          <img
-            src={heroBg}
-            alt="Healthcare network across Africa"
-            className="h-full w-full object-cover opacity-30"
-          />
+          <img src={heroBg} alt="Healthcare network across Africa" className="h-full w-full object-cover opacity-30" />
           <div className="absolute inset-0 bg-gradient-to-b from-background/60 via-background/80 to-background" />
         </div>
         <div className="container relative z-10 mx-auto px-4 py-20">
           <div className="mx-auto max-w-3xl text-center">
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.8 }}
-            >
+            <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.8 }}>
               <div className="mb-6 inline-flex items-center gap-2 rounded-full border border-primary/30 bg-primary/10 px-4 py-1.5 text-sm text-primary">
                 <Zap className="h-3.5 w-3.5" />
                 Healthcare, reimagined for Africa
@@ -136,32 +95,22 @@ const Landing = () => {
             </motion.div>
             <motion.h1
               className="mb-6 text-4xl font-bold leading-tight tracking-tight text-foreground sm:text-5xl lg:text-6xl"
-              initial={{ opacity: 0, y: 30 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.8, delay: 0.15 }}
+              initial={{ opacity: 0, y: 30 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.8, delay: 0.15 }}
             >
-              Your Health,{" "}
-              <span className="text-gradient">One Platform</span>
+              Your Health,{" "}<span className="text-gradient">One Platform</span>
             </motion.h1>
             <motion.p
               className="mb-10 text-lg text-muted-foreground sm:text-xl"
-              initial={{ opacity: 0, y: 30 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.8, delay: 0.3 }}
+              initial={{ opacity: 0, y: 30 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.8, delay: 0.3 }}
             >
               Connect with doctors, labs, pharmacies, and emergency services — all coordinated through a single digital wallet.
             </motion.p>
             <motion.div
               className="flex flex-col items-center justify-center gap-4 sm:flex-row"
-              initial={{ opacity: 0, y: 30 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.8, delay: 0.45 }}
+              initial={{ opacity: 0, y: 30 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.8, delay: 0.45 }}
             >
               <Button variant="hero" size="lg" className="w-full sm:w-auto" asChild>
-                <Link to="/register">
-                  Create Free Account
-                  <ArrowRight className="ml-1 h-4 w-4" />
-                </Link>
+                <Link to="/register">Create Free Account <ArrowRight className="ml-1 h-4 w-4" /></Link>
               </Button>
               <Button variant="hero-outline" size="lg" className="w-full sm:w-auto" asChild>
                 <Link to="/login">Sign In</Link>
@@ -174,32 +123,18 @@ const Landing = () => {
       {/* Features */}
       <section className="py-20">
         <div className="container mx-auto px-4">
-          <motion.div
-            className="mb-14 text-center"
-            initial="hidden"
-            whileInView="visible"
-            viewport={{ once: true }}
-            variants={fadeUp}
-            custom={0}
-          >
+          <motion.div className="mb-14 text-center" initial="hidden" whileInView="visible" viewport={{ once: true }} variants={fadeUp} custom={0}>
             <h2 className="mb-3 text-3xl font-bold text-foreground">
-              Everything you need,{" "}
-              <span className="text-primary">in one place</span>
+              Everything you need, <span className="text-primary">in one place</span>
             </h2>
-            <p className="text-muted-foreground">
-              From consultation to medication delivery — WellBank coordinates it all.
-            </p>
+            <p className="text-muted-foreground">From consultation to medication delivery — WellBank coordinates it all.</p>
           </motion.div>
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
             {features.map((f, i) => (
               <motion.div
                 key={f.title}
                 className="group rounded-xl border border-border bg-card p-6 transition-colors hover:border-primary/40"
-                initial="hidden"
-                whileInView="visible"
-                viewport={{ once: true }}
-                variants={fadeUp}
-                custom={i}
+                initial="hidden" whileInView="visible" viewport={{ once: true }} variants={fadeUp} custom={i}
               >
                 <div className="mb-4 flex h-11 w-11 items-center justify-center rounded-lg bg-primary/10 text-primary transition-colors group-hover:gradient-primary group-hover:text-primary-foreground">
                   <f.icon className="h-5 w-5" />
@@ -215,32 +150,15 @@ const Landing = () => {
       {/* Role Selection */}
       <section className="py-20">
         <div className="container mx-auto px-4">
-          <motion.div
-            className="mb-14 text-center"
-            initial="hidden"
-            whileInView="visible"
-            viewport={{ once: true }}
-            variants={fadeUp}
-            custom={0}
-          >
+          <motion.div className="mb-14 text-center" initial="hidden" whileInView="visible" viewport={{ once: true }} variants={fadeUp} custom={0}>
             <h2 className="mb-3 text-3xl font-bold text-foreground">
-              Join as a{" "}
-              <span className="text-gradient">Patient or Provider</span>
+              Join as a <span className="text-gradient">Patient or Provider</span>
             </h2>
-            <p className="text-muted-foreground">
-              Select your role to get started
-            </p>
+            <p className="text-muted-foreground">Select your role to get started</p>
           </motion.div>
-          <div className="mx-auto grid max-w-4xl gap-4 sm:grid-cols-2">
+          <div className="mx-auto grid max-w-4xl gap-4 sm:grid-cols-3">
             {roles.map((role, i) => (
-              <motion.div
-                key={role.title}
-                initial="hidden"
-                whileInView="visible"
-                viewport={{ once: true }}
-                variants={fadeUp}
-                custom={i}
-              >
+              <motion.div key={role.title} initial="hidden" whileInView="visible" viewport={{ once: true }} variants={fadeUp} custom={i}>
                 <Link
                   to={role.href}
                   className="group flex items-start gap-4 rounded-xl border border-border bg-card p-6 transition-all hover:border-primary/50 hover:shadow-glow"
@@ -249,12 +167,8 @@ const Landing = () => {
                     <role.icon className="h-6 w-6" />
                   </div>
                   <div className="flex-1">
-                    <h3 className="mb-1 font-semibold text-foreground">
-                      {role.title}
-                    </h3>
-                    <p className="text-sm text-muted-foreground">
-                      {role.description}
-                    </p>
+                    <h3 className="mb-1 font-semibold text-foreground">{role.title}</h3>
+                    <p className="text-sm text-muted-foreground">{role.description}</p>
                   </div>
                   <ArrowRight className="mt-1 h-5 w-5 text-muted-foreground transition-transform group-hover:translate-x-1 group-hover:text-primary" />
                 </Link>

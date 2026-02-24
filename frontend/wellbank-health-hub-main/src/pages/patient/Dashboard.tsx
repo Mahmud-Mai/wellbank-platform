@@ -1,5 +1,5 @@
-import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
+import { useQuery } from "@tanstack/react-query";
 import { motion } from "framer-motion";
 import {
   Stethoscope,
@@ -16,13 +16,12 @@ import {
   TrendingUp,
   Plus,
 } from "lucide-react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useAuth } from "@/lib/auth-context";
 import { mockApi } from "@/lib/mock-api";
 import { formatCurrency, formatDate } from "@/lib/constants";
-import type { WalletInfo, Consultation, Transaction, WellPointsBalance } from "@/lib/types";
 
 const quickActions = [
   { icon: Stethoscope, label: "Book Doctor", href: "/doctors", color: "bg-primary/10 text-primary" },
@@ -44,28 +43,32 @@ const fadeUp = {
 
 const Dashboard = () => {
   const { user } = useAuth();
-  const [wallet, setWallet] = useState<WalletInfo | null>(null);
-  const [consultations, setConsultations] = useState<Consultation[]>([]);
-  const [transactions, setTransactions] = useState<Transaction[]>([]);
-  const [wellpoints, setWellpoints] = useState<WellPointsBalance | null>(null);
-  const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    const load = async () => {
-      const [w, c, t, wp] = await Promise.all([
-        mockApi.wallet.get(),
-        mockApi.consultations.list(),
-        mockApi.wallet.getTransactions(),
-        mockApi.wellpoints.getBalance(),
-      ]);
-      setWallet(w.data);
-      setConsultations(c.data.consultations);
-      setTransactions(t.data.transactions);
-      setWellpoints(wp.data);
-      setLoading(false);
-    };
-    load();
-  }, []);
+  const { data: walletData, isLoading: walletLoading } = useQuery({
+    queryKey: ["wallet"],
+    queryFn: () => mockApi.wallet.get(),
+  });
+
+  const { data: consultData, isLoading: consultLoading } = useQuery({
+    queryKey: ["consultations", "dashboard"],
+    queryFn: () => mockApi.consultations.list({ perPage: 5 }),
+  });
+
+  const { data: txData, isLoading: txLoading } = useQuery({
+    queryKey: ["transactions", "dashboard"],
+    queryFn: () => mockApi.wallet.getTransactions({ perPage: 5 }),
+  });
+
+  const { data: wpData } = useQuery({
+    queryKey: ["wellpoints-balance"],
+    queryFn: () => mockApi.wellpoints.getBalance(),
+  });
+
+  const wallet = walletData?.data;
+  const consultations = consultData?.data.consultations ?? [];
+  const transactions = txData?.data.transactions ?? [];
+  const wellpoints = wpData?.data;
+  const loading = walletLoading || consultLoading || txLoading;
 
   const upcomingConsultations = consultations.filter(
     (c) => c.status === "scheduled"
@@ -110,18 +113,11 @@ const Dashboard = () => {
                 <Wallet className="h-8 w-8 text-primary-foreground/40" />
               </div>
               <div className="mt-6 flex gap-3">
-                <Button
-                  size="sm"
-                  className="bg-primary-foreground/20 text-primary-foreground hover:bg-primary-foreground/30"
-                >
-                  <Plus className="mr-1 h-3.5 w-3.5" /> Fund
+                <Button size="sm" className="bg-primary-foreground/20 text-primary-foreground hover:bg-primary-foreground/30" asChild>
+                  <Link to="/wallet"><Plus className="mr-1 h-3.5 w-3.5" /> Fund</Link>
                 </Button>
-                <Button
-                  size="sm"
-                  variant="ghost"
-                  className="text-primary-foreground/80 hover:bg-primary-foreground/10 hover:text-primary-foreground"
-                >
-                  History
+                <Button size="sm" variant="ghost" className="text-primary-foreground/80 hover:bg-primary-foreground/10 hover:text-primary-foreground" asChild>
+                  <Link to="/wallet">History</Link>
                 </Button>
               </div>
               {wellpoints && (
@@ -140,7 +136,7 @@ const Dashboard = () => {
         </motion.div>
       )}
 
-      {/* Quick Actions - Bento Grid */}
+      {/* Quick Actions */}
       <motion.div initial="hidden" animate="visible" variants={fadeUp} custom={1}>
         <h2 className="mb-3 text-sm font-medium text-muted-foreground">Quick Actions</h2>
         <div className="grid grid-cols-3 gap-3 sm:grid-cols-6">
@@ -167,14 +163,10 @@ const Dashboard = () => {
       <motion.div initial="hidden" animate="visible" variants={fadeUp} custom={2}>
         <div className="mb-3 flex items-center justify-between">
           <h2 className="text-sm font-medium text-muted-foreground">Upcoming Appointments</h2>
-          <Link to="/consultations" className="text-xs text-primary hover:underline">
-            View all
-          </Link>
+          <Link to="/consultations" className="text-xs text-primary hover:underline">View all</Link>
         </div>
         {loading ? (
-          <div className="space-y-3">
-            <Skeleton className="h-20 w-full rounded-xl" />
-          </div>
+          <Skeleton className="h-20 w-full rounded-xl" />
         ) : upcomingConsultations.length === 0 ? (
           <Card className="border-dashed">
             <CardContent className="flex flex-col items-center justify-center p-8 text-center">
@@ -201,9 +193,7 @@ const Dashboard = () => {
                   </div>
                   <div className="text-right">
                     <p className="text-sm font-medium text-foreground">{formatCurrency(c.fee)}</p>
-                    <span className="inline-block rounded bg-primary/10 px-2 py-0.5 text-xs capitalize text-primary">
-                      {c.status}
-                    </span>
+                    <span className="inline-block rounded bg-primary/10 px-2 py-0.5 text-xs capitalize text-primary">{c.status}</span>
                   </div>
                 </CardContent>
               </Card>
@@ -216,43 +206,25 @@ const Dashboard = () => {
       <motion.div initial="hidden" animate="visible" variants={fadeUp} custom={3}>
         <div className="mb-3 flex items-center justify-between">
           <h2 className="text-sm font-medium text-muted-foreground">Recent Activity</h2>
-          <Link to="/wallet" className="text-xs text-primary hover:underline">
-            View all
-          </Link>
+          <Link to="/wallet" className="text-xs text-primary hover:underline">View all</Link>
         </div>
         {loading ? (
           <div className="space-y-2">
-            {[1, 2, 3].map((i) => (
-              <Skeleton key={i} className="h-16 w-full rounded-xl" />
-            ))}
+            {[1, 2, 3].map((i) => <Skeleton key={i} className="h-16 w-full rounded-xl" />)}
           </div>
         ) : (
           <Card>
             <CardContent className="divide-y divide-border p-0">
               {transactions.map((tx) => (
                 <div key={tx.id} className="flex items-center gap-3 p-4">
-                  <div
-                    className={`flex h-9 w-9 items-center justify-center rounded-lg ${
-                      tx.type === "credit"
-                        ? "bg-primary/10 text-primary"
-                        : "bg-destructive/10 text-destructive"
-                    }`}
-                  >
-                    {tx.type === "credit" ? (
-                      <ArrowDownLeft className="h-4 w-4" />
-                    ) : (
-                      <ArrowUpRight className="h-4 w-4" />
-                    )}
+                  <div className={`flex h-9 w-9 items-center justify-center rounded-lg ${tx.type === "credit" ? "bg-primary/10 text-primary" : "bg-destructive/10 text-destructive"}`}>
+                    {tx.type === "credit" ? <ArrowDownLeft className="h-4 w-4" /> : <ArrowUpRight className="h-4 w-4" />}
                   </div>
                   <div className="flex-1">
                     <p className="text-sm font-medium text-foreground">{tx.description}</p>
                     <p className="text-xs text-muted-foreground">{formatDate(tx.createdAt)}</p>
                   </div>
-                  <p
-                    className={`text-sm font-semibold ${
-                      tx.type === "credit" ? "text-primary" : "text-foreground"
-                    }`}
-                  >
+                  <p className={`text-sm font-semibold ${tx.type === "credit" ? "text-primary" : "text-foreground"}`}>
                     {tx.type === "credit" ? "+" : "-"}{formatCurrency(tx.amount)}
                   </p>
                 </div>

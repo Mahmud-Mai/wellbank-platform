@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { motion } from "framer-motion";
 import {
   Star,
@@ -19,6 +19,7 @@ import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Progress } from "@/components/ui/progress";
 import { mockApi } from "@/lib/mock-api";
+import { toast } from "sonner";
 import { formatDate } from "@/lib/constants";
 
 const tierColors: Record<string, string> = {
@@ -40,6 +41,7 @@ const fadeUp = {
 };
 
 const WellPointsPage = () => {
+  const queryClient = useQueryClient();
   const [txPage, setTxPage] = useState(1);
 
   const { data: balanceData, isLoading: balanceLoading } = useQuery({
@@ -68,6 +70,15 @@ const WellPointsPage = () => {
   const rules = rulesData?.data.rules ?? [];
   const milestones = rulesData?.data.milestones ?? [];
   const rewards = marketData?.data.rewards ?? [];
+
+  const redeemMutation = useMutation({
+    mutationFn: (rewardId: string) => mockApi.wellpoints.redeem(rewardId),
+    onSuccess: (res) => {
+      toast.success(`Redeemed! Voucher: ${res.data.voucherCode}`);
+      queryClient.invalidateQueries({ queryKey: ["wellpoints-balance"] });
+      queryClient.invalidateQueries({ queryKey: ["wellpoints-transactions"] });
+    },
+  });
 
   // Progress to next tier
   const currentTierIdx = balance ? tierOrder.indexOf(balance.tier) : 0;
@@ -163,6 +174,15 @@ const WellPointsPage = () => {
                   {rw.pointsCost} pts
                 </Badge>
                 <p className="text-[10px] text-muted-foreground">{rw.stock} left</p>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="mt-1 w-full text-xs"
+                  disabled={!balance || balance.balance < rw.pointsCost || redeemMutation.isPending}
+                  onClick={() => redeemMutation.mutate(rw.id)}
+                >
+                  Redeem
+                </Button>
               </CardContent>
             </Card>
           ))}

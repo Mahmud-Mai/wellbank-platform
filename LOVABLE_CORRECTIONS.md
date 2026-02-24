@@ -1,438 +1,763 @@
-# WellBank — Lovable Analysis & Corrections
+# WellBank — Complete API Contract for Lovable
 
-**Date:** 2026-02-19
-
----
-
-## Part 1: What's Working (Lovable Did Well)
-
-| Area | Status | Notes |
-|------|--------|-------|
-| **Tech Stack** | ✅ | Next.js 14, Tailwind, Radix UI/shadcn, Lucide, React Hook Form + Zod |
-| **Patient Registration** | ✅ | 4-step flow: Account → Personal → Health → Insurance |
-| **Mock API** | ✅ | Realistic mock data with proper delays |
-| **Dashboard** | ✅ | Quick actions, wallet card, consultations, transactions, WellPoints |
-| **Nigeria-Centric** | ✅ | Phone +234, Regions, Currency ₦ |
-| **Types** | ✅ | Comprehensive types.ts covering Patient, Wallet, Consultations, etc. |
+> Version: 2.0
+> Date: 2026-02-19
+> Purpose: Single source of truth for frontend development
 
 ---
 
-## Part 2: Gaps vs PRD & Final Decisions
+## ⚠️ IMPORTANT: Read This First
 
-### Critical Gaps
+**User Roles (4 total):**
 
-| # | Issue | Current | Expected (PRD) | Action |
-|---|-------|---------|----------------|--------|
-| **1** | **Registration Flow** | 4 steps (Account → Personal → Health → Insurance) | **10 steps**: Splash → Welcome → Signup → OTP → Password → Personal → **Subscription** → Payment → Success → Login | ADD: Steps 1-3 (Splash, Welcome, OTP), Steps 7-8 (Subscription + Payment) |
-| **2** | **OTP Verification** | NOT implemented in frontend | OTP step after phone entry, verify via code | ADD OTP flow |
-| **3** | **Subscription** | NOT implemented | Step 7: Plan selection, Step 8: Payment | ADD subscription selection + payment |
-| **4** | **User Roles** | Single role only | Multi-role hybrid model | Update types and mock API |
-| **5** | **Patient Profile Fields** | Missing: nationality, LGA | Add: nationality, LGA (from PRD Patient Section A) | ADD fields |
-| **6** | **Organizations/Hospital** | NOT implemented | Hospital as Organization entity with members | ADD organization types and mock endpoints |
-
-### Medium Gaps
-
-| # | Issue | Current | Expected | Action |
-|---|-------|---------|----------|--------|
-| **7** | **Provider Onboarding** | NOT implemented | 4-step: Basic → Professional → Regulatory → Banking | ADD provider registration flows |
-| **8** | **Provider Roles** | 8 roles in types.ts | But no onboarding UI | ADD for Doctor, Lab, Pharmacy, Hospital, Emergency |
-| **9** | **Bank Accounts** | NOT in types | For provider payouts (PRD Banking Section) | ADD BankAccount type |
-| **10** | **Ledger/Double-Entry** | Simple transactions | Full double-entry for financial tracking | ADD ledger entry types (future) |
-| **11** | **Role Switcher** | NOT implemented | Multi-role users need role switcher in UI | ADD role switcher |
-| **12** | **Splash/Welcome** | NOT implemented | First 3 screens of onboarding | ADD splash and welcome slides |
-
----
-
-## Part 3: Context for Copy-Paste to Lovable
-
-### Updated User Roles (Multi-Role Model)
-
-```typescript
-// User roles - SIMPLIFIED (3 roles + wellbank_admin)
-export type UserRole =
-  | "patient"                    // Seeks healthcare services
-  | "doctor"                     // Provides consultations (can be independent)
-  | "provider_admin"              // Creates organizations (hospital/lab/pharmacy/etc)
-  | "wellbank_admin";            // Platform admin (seeded, created by super admin)
-
-// Organization types - ALL provider types are organizations
-export type OrganizationType =
-  | "hospital"
-  | "laboratory" 
-  | "pharmacy"
-  | "clinic"
-  | "insurance"
-  | "emergency"
-  | "logistics";
-
-// Roles within an organization (scoped to org, not global)
-export type OrganizationMemberRole =
-  | "admin"            // Manages org, invites members
-  | "doctor"           // Works at org
-  | "pharmacist"        // Works at pharmacy org
-  | "lab_tech"          // Works at lab org
-  | "nurse"
-  | "receptionist"
-  | "staff";
-```
-
-### Updated Patient Profile (PRD Fields)
-
-```typescript
-export interface PatientProfile {
-  // ... existing fields
-  nationality: string;          // NEW: from PRD
-  lga: string;                  // NEW: Local Government Area (Nigeria)
-  nextOfKin: {                  // NEW: distinct from emergency contact
-    name: string;
-    phoneNumber: string;
-    relationship: string;
-  };
-  // Selfie for verification - NEW
-  profilePhoto?: string;
-}
-```
-
-### Subscription Model (NEW)
-
-```typescript
-export interface SubscriptionPlan {
-  id: string;
-  name: string;               // "Basic", "Standard", "Premium"
-  price: number;               // Monthly price in NGN
-  billingCycle: "monthly" | "yearly";
-  features: string[];
-  isActive: boolean;
-}
-
-export interface UserSubscription {
-  id: string;
-  userId: string;
-  planId: string;
-  status: "active" | "expired" | "cancelled";
-  startDate: string;
-  renewalDate: string;
-  paymentMethod: "wallet" | "card" | "bank_transfer";
-}
-```
-
-### Updated Auth Flow (10 Steps per PRD)
-
-```
-1. Splash Screen          → App opening
-2. Welcome (3 slides)    → Platform introduction
-3. Sign Up               → Email/Phone + Password
-4. OTP Verification       → Verify phone/email
-5. Create Password       → (if not set in step 3)
-6. Personal Details      → Name, DOB, Gender, Address, Emergency Contact
-7. Subscription Plan     → NEW: Select plan
-8. Payment               → NEW: Pay for subscription
-9. Success               → Account created
-10. Login               → Sign in
-```
-
-### Bank Account (for Provider Settlements)
-
-```typescript
-export interface BankAccount {
-  id: string;
-  userId: string;
-  bankName: string;
-  accountName: string;
-  accountNumber: string;
-  bvn: string;
-  verificationStatus: "pending" | "verified" | "rejected";
-  createdAt: string;
-}
-```
-
----
-
-## Part 4: Prompt for Lovable — Corrections & Next Tasks
-
-Copy and paste this into Lovable:
-
----
-
-### CORRECTIONS NEEDED (Do First)
-
-**1. Add Splash & Welcome Screens**
-- Create Splash screen (2-3 seconds, logo)
-- Create Welcome carousel (3 slides explaining the app)
-
-**2. Add OTP Verification Step**
-- After user enters email/phone in registration, show OTP input screen
-- Mock OTP verification (accept any 6-digit code)
-- Move to password creation after OTP verified
-
-**3. Add Subscription Selection (NEW Step 7)**
-- Show 3 plans: Basic (₦X/mo), Standard (₦Y/mo), Premium (₦Z/mo)
-- Allow selection
-- Mock payment (simulate successful payment)
-
-**4. Update Patient Profile Type**
-- Add fields: `nationality`, `lga`, `nextOfKin`, `profilePhoto`
-- Update Registration form to collect these
-
-**5. Add Role Switcher**
-- In user dropdown/menu, show "Switch Role" if user has multiple roles
-- Updates `activeRole` in context
-- Changes dashboard content based on active role
-
----
-
-### CRITICAL: Patient Onboarding - ADD Missing Field
-
-**Current Medications** is MISSING from the registration form!
-
-Add this field to Step 3 (Health Info):
-```typescript
-currentMedications: z.string().optional(),  // Add this
-```
-
-And update PatientProfile type:
-```typescript
-currentMedications: string[],  // NEW - current medications
-```
-
----
-
-### NEW TASKS (Do After Corrections)
-
-**Task A: Provider Registration Flows**
-
-Create registration for each provider type per the PRD (4 sections each):
-
-#### Doctor Registration (4 Steps):
-- **Step 1: Account** - email, password, phone
-- **Step 2: Professional** - specialty, subspecialty, yearsExperience, consultationFee, hospitalAffiliation(s), availability
-- **Step 3: Regulatory Documents** - MBBS Certificate, MDCN License (number + expiry), Annual Practicing License, NYSC Certificate, Medical Indemnity Insurance (optional), Government ID, Live Selfie
-- **Step 4: Banking** - bankName, accountName, accountNumber, BVN
-
-#### Laboratory Registration (4 Steps):
-- **Step 1: Account** - email, password, phone
-- **Step 2: Business Info** - Lab Name, CAC Number, Contact Person, Phone, Email, Tests Offered (list), Home Collection (yes/no), Operating Hours
-- **Step 3: Regulatory Documents** - MLSCN License, Practice License, CAC Certificate, TIN, Environmental/Health Permit (optional), ISO 15189 (optional), Chief Lab Scientist Name + MLSCN Number
-- **Step 4: Banking** - bankName, accountName, accountNumber, BVN
-
-#### Pharmacy Registration (4 Steps):
-- **Step 1: Account** - email, password, phone
-- **Step 2: Business Info** - Pharmacy Name, CAC Number, Superintendent Pharmacist Name, Delivery Available (yes/no), Cold-chain (yes/no), Operating Hours
-- **Step 3: Regulatory Documents** - PCN License, Superintendent Pharmacist License, Annual Premises License, CAC Certificate, TIN, Controlled Drugs Declaration
-- **Step 4: Banking** - bankName, accountName, accountNumber, BVN
-
-#### Hospital Registration:
-- Hospital is an ORGANIZATION, created via /organizations endpoint
-- Has additional fields: bed capacity, departments, services, branches, etc.
-- Medical Director Name + MDCN Number
-
-#### Emergency Provider Registration:
-- Similar 4-step flow with fleet details, ambulance types (BLS/ALS), GPS, response time
-
-**Task B: Organization & Members**
-
-- Add types for Organization, OrganizationMember
-- Mock API for organization endpoints
-- Provider admin can view/manage organization members
-
-**Task C: Ledger/Double-Entry Types (Future)**
-
-- Add LedgerEntry type for financial tracking
-- For now, just add to types.ts for future implementation
-
-**Task D: Update Mock API**
-
-Add these new endpoints to mock-api.ts:
-- `auth.verifyOtp` - already exists, ensure works
-- `auth.sendOtp` - send OTP to phone/email
-- `auth.registerWithOtp` - new flow: send OTP → verify → create account
-- `subscription.plans` - list available plans
-- `subscription.subscribe` - select and pay for plan
-- `organizations.list` - list user's organizations
-- `organizations.members` - list members of org
-- `bankAccounts.list` - list user's bank accounts
-- `bankAccounts.add` - add bank account for payouts
-
----
-
-### CONTEXT: Final Architecture Decisions
-
-**User Roles (3 Initial + Add More):**
 - `patient` - Seeks healthcare services
-- `doctor` - Provides consultations (can be independent or affiliated to organization)
-- `provider_admin` - Manages an organization (hospital/lab/pharmacy)
-- Users can ADD more roles later (e.g., patient adds doctor role)
+- `doctor` - Provides consultations (can be independent)
+- `provider_admin` - Creates organizations (hospital/lab/pharmacy/etc)
+- `wellbank_admin` - Platform admin (seeded, created by super admin)
 
-**NOTE: Deviation from PRD**
-The PRD specifies users register directly as lab, pharmacy, hospital. 
-We simplified to: users register as patient/doctor/provider_admin, then:
-- provider_admin creates ORGANIZATIONS (lab, pharmacy, hospital)
-- Users are INVITED to organizations with roles (doctor, staff, pharmacist, lab_tech)
+**Organization Types (created by provider_admin):**
 
-This is cleaner because:
-1. Fewer user roles to manage
-2. Organizations are distinct entities (can have branches)
-3. Staff roles are scoped to organizations, not global
-4. Easier to add new organization types later
+- `hospital`, `laboratory`, `pharmacy`, `clinic`, `insurance`, `emergency`, `logistics`
 
-**Organizations:**
-- Created by users with `provider_admin` role
-- Types: hospital, lab, pharmacy (with branches support)
-- Members invited with roles: doctor, staff, pharmacist, lab_tech, receptionist
+**Organization Member Roles (scoped to org):**
 
-**Independent Doctors:**
-- Register as `doctor` role directly
-- Can later be invited to organizations
-- Don't need to create an organization
+- `admin`, `doctor`, `pharmacist`, `lab_tech`, `nurse`, `receptionist`, `staff`
 
-**Full Onboarding (10 steps):**
-- Splash → Welcome → Signup → OTP → Password → Personal → Subscription → Payment → Success → Login
+**All 3rd-party integrations are STUBBED:**
 
-**Financial Ledger:**
-- Double-entry bookkeeping for all transactions
-- Tracks debits/credits for reconciliation
-
-**Third-Party Integrations:**
-- ALL deferred until core app is built
-- Stubs for: KYC (Dojah), Payments (BudPay), SMS, Video, Logistics
+- KYC (Dojah), Payments (BudPay), SMS, Video, Logistics = return mock success
 
 ---
 
-## PART 5: REST API PAYLOADS (For Lovable)
+## Base URL
 
-Copy this section specifically to Lovable - these are the actual API contracts:
-
-### Auth Endpoints
-
-```typescript
-// POST /auth/otp/send
-// Send OTP to phone/email
-{ type: "phone" | "email", destination: string }
-→ { otpId: uuid, expiresAt: ISO }
-
-// POST /auth/otp/verify  
-// Verify OTP, returns temp token
-{ otpId: uuid, code: string }
-→ { verificationToken: string }
-
-// POST /auth/register/complete
-// Complete registration after OTP
-{ 
-  verificationToken: string,
-  password: string,
-  firstName: string,
-  lastName: string,
-  phoneNumber: string,
-  role: "patient" | "doctor" | "lab" | "pharmacy" | "insurance_provider" | "emergency_provider"
-}
-→ { userId: uuid, roles: string[], activeRole: string, needsOnboarding: boolean }
-
-// POST /auth/login
-{ email: string, password: string, mfaCode?: string }
-→ { 
-  accessToken: string, 
-  refreshToken: string, 
-  user: { 
-    id: uuid, 
-    email: string, 
-    roles: string[],      // MULTI-ROLE
-    activeRole: string,  // CURRENT CONTEXT
-    isVerified: boolean,
-    isKycVerified: boolean 
-  } 
-}
-
-// POST /auth/refresh
-{ refreshToken: string }
-→ { accessToken: string, refreshToken: string }
 ```
-
-### Patient Profile Endpoints
-
-```typescript
-// GET /patients/profile
-→ { 
-  id: uuid, firstName, lastName, dateOfBirth, gender,
-  nationality: string,       // NEW
-  lga: string,               // NEW  
-  profilePhoto: string,     // NEW
-  nextOfKin: { name, phoneNumber, relationship },  // NEW
-  genotype: string,          // NEW (AA, AS, SS, AC)
-  bloodType, allergies, chronicConditions,
-  address: { street, city, state, lga, country, postalCode },
-  emergencyContacts: [],
-  nin, bvn, kycLevel, isKycVerified,
-  identificationType: "NIN" | "BVN" | "VOTER_CARD" | "DRIVERS_LICENSE" | "PASSPORT"  // EXPANDED
-}
-
-// PATCH /patients/profile
-// All fields optional
-{ nationality?, lga?, firstName?, lastName?, dateOfBirth?, gender?, 
-  profilePhoto?, nextOfKin?, genotype?, bloodType?, allergies?, chronicConditions?,
-  address?, emergencyContacts? }
-```
-
-### Organization Endpoints (Hospitals, Labs, Pharmacies)
-
-```typescript
-// POST /organizations (provider_admin only)
-{ 
-  name: string,
-  type: "hospital" | "lab_chain" | "pharmacy_chain" | "clinic",
-  address: { street, city, state, country },
-  phoneNumber: string,
-  email: string
-}
-→ { id: uuid, status: "pending" }
-
-// GET /organizations
-→ { organizations: [{ id, name, type, roleInOrg, status }] }
-
-// POST /organizations/:id/members
-{ userId: uuid, roleInOrg: "admin" | "doctor" | "pharmacist" | "lab_tech" | "receptionist", department?: string }
-```
-
-### Subscription Endpoints
-
-```typescript
-// GET /subscriptions/plans
-→ { plans: [{ id, name, price, billingCycle, features: [] }] }
-
-// POST /subscriptions
-{ planId: uuid, paymentMethod: "wallet" | "card" | "bank_transfer" }
-→ { subscriptionId, planId, status: "active", startDate, renewalDate }
-```
-
-### Bank Accounts (for Provider Payouts)
-
-```typescript
-// GET /bank-accounts
-→ { accounts: [{ id, bankName, accountName, accountNumber, verificationStatus }] }
-
-// POST /bank-accounts
-{ bankName: string, accountName: string, accountNumber: string, bvn: string }
+http://localhost:35432/api/v1
 ```
 
 ---
 
-### FILES TO UPDATE
+## API Response Standard
 
-1. `src/lib/types.ts` - Add new types above
-2. `src/lib/mock-api.ts` - Add new endpoints
-3. `src/pages/auth/Register.tsx` - Add OTP, Subscription, Welcome screens
-4. `src/pages/Landing.tsx` - Add role-based routing after login
-5. `src/lib/auth-context.tsx` - Support multi-role
-
----
-
-### INTEGRATIONS TO STUB (Not Build)
-
-These should return mock/success responses only:
-- KYC verification (Dojah) - return mock verified
-- Payment (BudPay) - return mock success
-- SMS (OTP delivery) - return mock sent
-- Video consultation - return mock URL
-- Logistics/delivery - return mock tracking
+```json
+{
+  "status": "success" | "error" | "fail",
+  "message": "Human-readable message",
+  "data": { ... },
+  "errors": [{ "code": "CODE", "message": "..." }],
+  "meta": { "pagination": { "total": 150, "page": 1, "perPage": 20 } }
+}
+```
 
 ---
 
+## 1. Authentication
+
+### 1.1 Send OTP
+
+```
+POST /auth/otp/send
+Body: { "type": "phone" | "email", "destination": "+2348012345678" }
+Response: { "otpId": "uuid", "expiresAt": "ISO timestamp" }
+```
+
+### 1.2 Verify OTP
+
+```
+POST /auth/otp/verify
+Body: { "otpId": "uuid", "code": "123456" }
+Response: { "verificationToken": "temp-token-string" }
+```
+
+### 1.3 Complete Registration (after OTP)
+
+```
+POST /auth/register/complete
+Body: {
+  "verificationToken": "string",
+  "password": "string",
+  "firstName": "string",
+  "lastName": "string",
+  "phoneNumber": "string",
+  "role": "patient" | "doctor" | "provider_admin"
+}
+Response: {
+  "userId": "uuid",
+  "roles": ["patient"],
+  "activeRole": "patient",
+  "needsOnboarding": true
+}
+```
+
+### 1.4 Login
+
+```
+POST /auth/login
+Body: { "email": "string", "password": "string", "mfaCode?: "string" }
+Response: {
+  "accessToken": "jwt",
+  "refreshToken": "jwt",
+  "user": {
+    "id": "uuid",
+    "email": "string",
+    "roles": ["patient", "doctor"],
+    "activeRole": "patient",
+    "isVerified": true,
+    "isKycVerified": false,
+    "mfaEnabled": false
+  }
+}
+```
+
+### 1.5 Refresh Token
+
+```
+POST /auth/refresh
+Body: { "refreshToken": "string" }
+Response: { "accessToken": "jwt", "refreshToken": "jwt" }
+```
+
+### 1.6 Logout
+
+```
+POST /auth/logout
+Header: Authorization: Bearer <token>
+Response: { "message": "Logged out" }
+```
+
+---
+
+## 2. User & Profile
+
+### 2.1 Get Current User
+
+```
+GET /users/me
+Header: Authorization: Bearer <token>
+Response: {
+  "id": "uuid",
+  "email": "string",
+  "roles": ["patient"],
+  "activeRole": "patient",
+  "firstName": "string",
+  "lastName": "string",
+  "isKycVerified": false,
+  "kycLevel": 0
+}
+```
+
+### 2.2 Update User
+
+```
+PATCH /users/me
+Body: { "firstName"?: "string", "lastName"?: "string", "phoneNumber"?: "string" }
+```
+
+### 2.3 Add Role (Multi-role)
+
+```
+POST /users/me/roles
+Body: { "role": "doctor" | "patient" | "provider_admin" }
+Response: { "roles": ["patient", "doctor"], "activeRole": "patient" }
+```
+
+### 2.4 Switch Active Role
+
+```
+POST /users/me/switch-role
+Body: { "activeRole": "doctor" }
+Response: { "activeRole": "doctor" }
+```
+
+---
+
+## 3. Patient Profile
+
+### 3.1 Get Patient Profile
+
+```
+GET /patients/profile
+Header: Authorization: Bearer <token>
+Response: {
+  "id": "uuid",
+  "userId": "uuid",
+  "firstName": "string",
+  "lastName": "string",
+  "dateOfBirth": "1990-01-15",
+  "gender": "male" | "female" | "other",
+  "phoneNumber": "+2348012345678",
+  "email": "string",
+  "nationality": "Nigerian",
+  "lga": "Victoria Island",
+  "profilePhoto": "url",
+  "nextOfKin": { "name": "string", "phoneNumber": "string", "relationship": "spouse" },
+  "identificationType": "NIN" | "BVN" | "VOTER_CARD" | "DRIVERS_LICENSE" | "PASSPORT",
+  "identificationNumber": "string",
+  "nin": "string",
+  "bvn": "string",
+  "bloodType": "O+",
+  "genotype": "AA",
+  "currentMedications": ["Vitamin D"],
+  "allergies": ["Penicillin"],
+  "chronicConditions": ["Diabetes"],
+  "address": { "street": "string", "city": "string", "state": "Lagos", "lga": "string", "country": "Nigeria", "postalCode": "string" },
+  "emergencyContacts": [{ "name": "string", "relationship": "string", "phoneNumber": "string" }],
+  "insurancePolicy": { "provider": "AXA", "policyNumber": "string", "isActive": true },
+  "kycLevel": 0,
+  "isKycVerified": false
+}
+```
+
+### 3.2 Update Patient Profile
+
+```
+PATCH /patients/profile
+Body: {
+  "firstName"?: "string",
+  "lastName"?: "string",
+  "dateOfBirth"?: "1990-01-15",
+  "gender"?: "male" | "female" | "other",
+  "nationality"?: "Nigerian",
+  "lga"?: "string",
+  "profilePhoto"?: "url",
+  "nextOfKin"?: { "name": "string", "phoneNumber": "string", "relationship": "string" },
+  "bloodType"?: "O+",
+  "genotype"?: "AA",
+  "currentMedications"?: ["string"],
+  "allergies"?: ["string"],
+  "chronicConditions"?: ["string"],
+  "address"?: { "street": "string", "city": "string", "state": "string", "lga": "string", "country": "string", "postalCode": "string" },
+  "emergencyContacts"?: [{ "name": "string", "phoneNumber": "string", "relationship": "string" }]
+}
+```
+
+---
+
+## 4. Doctor Profile
+
+### 4.1 Get Doctor Profile
+
+```
+GET /doctors/:id
+Response: {
+  "id": "uuid",
+  "userId": "uuid",
+  "firstName": "string",
+  "lastName": "string",
+  "profilePhoto": "url",
+  "bio": "string",
+  "specialties": ["Cardiology"],
+  "qualifications": [{ "degree": "MBBS", "institution": "UNIBEN", "year": 2015 }],
+  "yearsExperience": 10,
+  "consultationFee": 5000,
+  "licenseNumber": "string",
+  "mdcnLicenseNumber": "string",
+  "mdcnExpiryDate": "2025-12-31",
+  "rating": 4.5,
+  "reviewCount": 120,
+  "acceptsInsurance": true,
+  "languages": ["English", "Yoruba"],
+  "availability": [{ "dayOfWeek": 1, "startTime": "09:00", "endTime": "17:00", "isAvailable": true }],
+  "providerStatus": "active"
+}
+```
+
+### 4.2 Search Doctors
+
+```
+GET /doctors/search?specialty=Cardiology&location=Lagos&minRating=4&maxFee=10000
+Response: { "doctors": [...] }
+```
+
+---
+
+## 5. Organizations (Hospitals, Labs, Pharmacies)
+
+### 5.1 Create Organization (provider_admin only)
+
+```
+POST /organizations
+Header: Authorization: Bearer <token>
+Body: {
+  "name": "Lagos General Hospital",
+  "type": "hospital" | "laboratory" | "pharmacy" | "clinic" | "insurance" | "emergency" | "logistics",
+  "address": { "street": "string", "city": "string", "state": "Lagos", "country": "Nigeria" },
+  "phoneNumber": "string",
+  "email": "string"
+}
+Response: {
+  "id": "uuid",
+  "name": "string",
+  "type": "hospital",
+  "status": "pending"
+}
+```
+
+### 5.2 Get My Organizations
+
+```
+GET /organizations
+Header: Authorization: Bearer <token>
+Response: {
+  "organizations": [
+    { "id": "uuid", "name": "string", "type": "hospital", "roleInOrg": "admin", "status": "active" }
+  ]
+}
+```
+
+### 5.3 Get Organization Details
+
+```
+GET /organizations/:id
+Response: {
+  "id": "uuid",
+  "name": "string",
+  "type": "hospital",
+  "address": {},
+  "phoneNumber": "string",
+  "email": "string",
+  "status": "active",
+  "bedCapacity"?: 100,
+  "departments"?: ["Cardiology", "Pediatrics"],
+  "services"?: ["Emergency", "Surgery"],
+  "operatingHours": { "monday": "08:00-20:00" }
+}
+```
+
+### 5.4 Add Organization Member (org admin only)
+
+```
+POST /organizations/:id/members
+Body: {
+  "userId": "uuid",
+  "roleInOrg": "admin" | "doctor" | "pharmacist" | "lab_tech" | "nurse" | "receptionist" | "staff",
+  "department": "string"
+}
+```
+
+### 5.5 Get Organization Members
+
+```
+GET /organizations/:id/members
+Response: {
+  "members": [
+    { "userId": "uuid", "firstName": "string", "lastName": "string", "roleInOrg": "doctor", "department": "Cardiology" }
+  ]
+}
+```
+
+### 5.6 Invite User to Organization
+
+```
+POST /organizations/:id/invite
+Body: { "email": "string", "roleInOrg": "doctor" }
+Response: { "inviteId": "uuid", "message": "Invitation sent" }
+```
+
+---
+
+## 6. Subscription (Patient)
+
+### 6.1 Get Plans
+
+```
+GET /subscriptions/plans
+Response: {
+  "plans": [
+    { "id": "uuid", "name": "Basic", "price": 5000, "billingCycle": "monthly", "features": ["Consultations", "Lab Tests"] }
+  ]
+}
+```
+
+### 6.2 Subscribe
+
+```
+POST /subscriptions
+Body: { "planId": "uuid", "paymentMethod": "wallet" | "card" | "bank_transfer" }
+Response: { "subscriptionId": "uuid", "status": "active", "startDate": "2026-02-19", "renewalDate": "2026-03-19" }
+```
+
+### 6.3 Get Current Subscription
+
+```
+GET /subscriptions/current
+Response: { "plan": {}, "status": "active", "renewalDate": "2026-03-19" }
+```
+
+---
+
+## 7. Wallet
+
+### 7.1 Get Wallet
+
+```
+GET /wallet
+Response: { "id": "uuid", "balance": 50000, "currency": "NGN", "isActive": true }
+```
+
+### 7.2 Fund Wallet
+
+```
+POST /wallet/fund
+Body: { "amount": 10000, "paymentMethod": "card" | "bank_transfer" }
+Response: { "paymentUrl": "https://budpay...", "reference": "string", "expiresAt": "ISO" }
+```
+
+### 7.3 Get Transactions
+
+```
+GET /wallet/transactions?type=credit&page=1&perPage=20
+Response: {
+  "transactions": [
+    { "id": "uuid", "type": "credit", "amount": 10000, "balanceAfter": 60000, "status": "completed", "description": "Wallet Top-up", "createdAt": "ISO" }
+  ]
+}
+```
+
+---
+
+## 8. Bank Accounts (Provider Payouts)
+
+### 8.1 Get Bank Accounts
+
+```
+GET /bank-accounts
+Response: {
+  "accounts": [
+    { "id": "uuid", "bankName": "GTBank", "accountName": "John Doe", "accountNumber": "0123456789", "verificationStatus": "verified" }
+  ]
+}
+```
+
+### 8.2 Add Bank Account
+
+```
+POST /bank-accounts
+Body: { "bankName": "GTBank", "accountName": "string", "accountNumber": "0123456789", "bvn": "string" }
+```
+
+---
+
+## 9. Consultations
+
+### 9.1 Book Consultation
+
+```
+POST /consultations
+Body: {
+  "doctorId": "uuid",
+  "type": "telehealth" | "in_person",
+  "scheduledAt": "2026-02-20T10:00:00Z",
+  "reason": "Follow-up",
+  "symptoms": ["headache"],
+  "useInsurance": false
+}
+Response: { "consultationId": "uuid", "status": "scheduled", "fee": 5000 }
+```
+
+### 9.2 Get Consultations
+
+```
+GET /consultations?status=scheduled
+Response: { "consultations": [...] }
+```
+
+### 9.3 Get Consultation Details
+
+```
+GET /consultations/:id
+Response: {
+  "id": "uuid",
+  "doctorId": "uuid",
+  "doctorName": "Dr. Smith",
+  "patientId": "uuid",
+  "type": "telehealth",
+  "status": "completed",
+  "scheduledAt": "ISO",
+  "fee": 5000,
+  "prescriptions": [{ "id": "uuid", "medicationName": "string", "dosage": "string" }],
+  "labOrders": [...]
+}
+```
+
+### 9.4 Start Video Session
+
+```
+POST /consultations/:id/video-session/start
+Response: { "videoUrl": "https://...", "token": "string" }
+```
+
+### 9.5 Cancel Consultation
+
+```
+POST /consultations/:id/cancel
+Response: { "refundAmount": 4500, "cancellationFee": 500 }
+```
+
+---
+
+## 10. Lab Orders
+
+### 10.1 Search Labs
+
+```
+GET /labs/search?location=Lagos&testType=Blood
+Response: { "labs": [...] }
+```
+
+### 10.2 Book Lab Test
+
+```
+POST /lab-orders
+Body: {
+  "labId": "uuid",
+  "tests": [{ "testId": "uuid" }],
+  "collectionType": "home" | "lab",
+  "scheduledAt": "ISO",
+  "address": {}
+}
+Response: { "orderId": "uuid", "status": "pending", "totalCost": 5000 }
+```
+
+### 10.3 Get Lab Order
+
+```
+GET /lab-orders/:id
+Response: { "id": "uuid", "status": "completed", "results": [...] }
+```
+
+---
+
+## 11. Pharmacy Orders
+
+### 11.1 Search Pharmacies
+
+```
+GET /pharmacies/search?location=Lagos&medication=Amoxicillin
+Response: { "pharmacies": [...] }
+```
+
+### 11.2 Check Availability
+
+```
+POST /pharmacies/:id/check-availability
+Body: { "medications": [{ "name": "Amoxicillin", "dosage": "500mg", "quantity": 2 }] }
+Response: { "available": true, "totalCost": 2000 }
+```
+
+### 11.3 Place Order
+
+```
+POST /pharmacy-orders
+Body: {
+  "pharmacyId": "uuid",
+  "prescriptionId": "uuid",
+  "medications": [{ "medicationId": "uuid", "quantity": 2 }],
+  "deliveryType": "pickup" | "delivery",
+  "deliveryAddress": {}
+}
+Response: { "orderId": "uuid", "status": "confirmed", "totalCost": 2000 }
+```
+
+### 11.4 Track Order
+
+```
+GET /pharmacy-orders/:id/track
+Response: { "status": "in_transit", "driverName": "John", "currentLocation": { "lat": 0, "lng": 0 } }
+```
+
+---
+
+## 12. Emergency
+
+### 12.1 Request Emergency
+
+```
+POST /emergency/requests
+Body: {
+  "type": "medical" | "accident" | "cardiac" | "respiratory" | "trauma",
+  "description": "string",
+  "location": { "latitude": 6.5, "longitude": 3.3 },
+  "severity": "critical" | "high" | "moderate"
+}
+Response: { "requestId": "uuid", "status": "requested", "estimatedArrival": "15 mins" }
+```
+
+### 12.2 Track Emergency
+
+```
+GET /emergency/requests/:id/track
+Response: { "status": "en_route", "ambulanceLocation": {}, "eta": "10 mins", "providerPhone": "string" }
+```
+
+---
+
+## 13. Insurance
+
+### 13.1 Add Policy
+
+```
+POST /insurance/policies
+Body: { "providerId": "uuid", "policyNumber": "string", "coverageType": "string", "expiresAt": "ISO" }
+```
+
+### 13.2 Verify Coverage
+
+```
+POST /insurance/verify-coverage
+Body: { "policyId": "uuid", "serviceType": "consultation", "serviceAmount": 5000 }
+Response: { "isEligible": true, "coverageAmount": 3000, "patientResponsibility": 2000 }
+```
+
+---
+
+## 14. Notifications
+
+### 14.1 Get Notifications
+
+```
+GET /notifications?isRead=false&type=appointment_reminder
+Response: {
+  "notifications": [...],
+  "unreadCount": 5
+}
+```
+
+### 14.2 Mark as Read
+
+```
+PATCH /notifications/:id/read
+```
+
+### 14.3 Mark All as Read
+
+```
+PATCH /notifications/read-all
+```
+
+---
+
+## 15. WellPoints
+
+### 15.1 Get Balance
+
+```
+GET /wellpoints/balance
+Response: { "balance": 2500, "tier": "gold", "expiringPoints": 500 }
+```
+
+### 15.2 Get Transactions
+
+```
+GET /wellpoints/transactions
+Response: { "transactions": [...] }
+```
+
+### 15.3 Get Earning Rules
+
+```
+GET /wellpoints/earning-rules
+Response: { "rules": [...], "milestones": [...] }
+```
+
+### 15.4 Get Marketplace
+
+```
+GET /wellpoints/marketplace
+Response: { "rewards": [...] }
+```
+
+### 15.5 Redeem Points
+
+```
+POST /wellpoints/redeem
+Body: { "rewardId": "uuid" }
+Response: { "voucherCode": "STRING", "expiresAt": "ISO" }
+```
+
+---
+
+## 16. Admin
+
+### 16.1 Dashboard Stats
+
+```
+GET /admin/dashboard
+Response: {
+  "users": { "total": 1000, "newToday": 50 },
+  "consultations": { "today": 100, "revenue": 500000 },
+  "providers": { "active": 200, "pendingVerification": 20 }
+}
+```
+
+### 16.2 Get Users
+
+```
+GET /admin/users?role=doctor&status=active&search=Smith
+Response: { "users": [...] }
+```
+
+### 16.3 Get Providers (with verification status)
+
+```
+GET /admin/providers?type=hospital&status=pending
+Response: { "providers": [...] }
+```
+
+### 16.4 Review Provider
+
+```
+POST /admin/providers/:id/review
+Body: { "action": "approve" | "reject" | "request_info", "comment": "string" }
+```
+
+### 16.5 Get Documents
+
+```
+GET /admin/documents?userId=uuid&status=pending
+Response: { "documents": [...] }
+```
+
+### 16.6 Review Document
+
+```
+POST /admin/documents/:id/review
+Body: { "action": "approve" | "reject", "rejectionReason": "string" }
+```
+
+---
+
+## Mock API Implementation Notes
+
+All third-party integrations should return mock success:
+
+```typescript
+// KYC (Dojah) - stub
+async verifyNin(nin: string) {
+  return { verified: true, name: "Mock Name", dob: "1990-01-01" };
+}
+
+// Payment (BudPay) - stub
+async initiatePayment(amount: number) {
+  return { paymentUrl: "https://mock-budpay...", reference: "MOCK-123" };
+}
+
+// SMS - stub
+async sendSms(phone: string, message: string) {
+  return { success: true, messageId: "MOCK-SMS" };
+}
+```
+
+---
+
+## Frontend Tasks Summary
+
+1. **Auth**: OTP flow, multi-role login, role switcher
+2. **Patient**: Profile with all fields (nationality, LGA, nextOfKin, currentMedications, etc.)
+3. **Organizations**: Create org, manage members, invite users
+4. **Subscription**: Plan selection, payment flow
+5. **Providers**: Doctor search, Lab search, Pharmacy search, booking flows
+6. **Wallet**: Fund, transactions
+7. **Bank Accounts**: Add for payouts
+8. **WellPoints**: Balance, earn, redeem
+9. **Admin**: Dashboard, user management, provider verification, document review
