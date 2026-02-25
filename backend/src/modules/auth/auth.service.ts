@@ -217,25 +217,28 @@ export class AuthService {
     // TODO: Verify the verificationToken properly
     // For now, just create the user
 
-    const existingUser = await this.userRepository.findOne({
-      where: { email: completeDto.email },
-    });
+    // Check for existing user by email if provided
+    if (completeDto.email) {
+      const existingUser = await this.userRepository.findOne({
+        where: { email: completeDto.email },
+      });
 
-    if (existingUser) {
-      throw new ConflictException('User with this email already exists');
+      if (existingUser) {
+        throw new ConflictException('User with this email already exists');
+      }
     }
 
     const passwordHash = await bcrypt.hash(completeDto.password, 12);
 
     const user = this.userRepository.create({
-      email: completeDto.email,
+      email: completeDto.email || undefined,
       passwordHash,
       roles: [completeDto.role],
       activeRole: completeDto.role,
       phoneNumber: completeDto.phoneNumber,
       firstName: completeDto.firstName,
       lastName: completeDto.lastName,
-      isEmailVerified: true,
+      isEmailVerified: !!completeDto.email,
       ndprConsent: false,
       dataProcessingConsent: false,
       marketingConsent: false,

@@ -44,12 +44,12 @@ const roleSchema = z.object({
 });
 
 const otpSendSchema = z.object({
-  otpType: z.enum(["phone", "email"]),
   destination: z
     .string()
     .trim()
-    .min(5, "Enter a valid phone or email")
-    .max(255),
+    .email("Invalid email address")
+    .or(z.literal(""))
+    .refine((val) => val !== "", { message: "Email is required" }),
 });
 
 const otpVerifySchema = z.object({
@@ -140,14 +140,15 @@ const Register = () => {
     setIsSubmitting(true);
     try {
       const res = await apiService.auth.sendOtp({
-        type: data.otpType,
+        type: 'email',
         destination: data.destination,
       });
-      setOtpId(res.data.otpId);
+      const resData = res.data as { otpId: string };
+      setOtpId(resData.otpId);
       setOtpDestination(data.destination);
       toast({
-        title: "OTP Sent! 📱",
-        description: `Check your ${data.otpType} for the code.`,
+        title: "OTP Sent! 📧",
+        description: `Check your email for the code.`,
       });
       nextStep();
     } catch {
@@ -346,6 +347,7 @@ const Register = () => {
                 onComplete={handleComplete}
                 onBack={prevStep}
                 isSubmitting={isSubmitting}
+                prefillEmail={otpDestination}
               />
             )}
           </AnimatePresence>
@@ -388,51 +390,28 @@ function StepSendOtp({
   const {
     register,
     handleSubmit,
-    setValue,
-    watch,
     formState: { errors },
   } = useForm<OtpSendForm>({
     resolver: zodResolver(otpSendSchema),
-    defaultValues: { otpType: "phone", destination: "" },
+    defaultValues: { destination: "" },
   });
-  const otpType = watch("otpType");
 
   return (
     <StepWrapper>
       <h2 className="mb-1 text-xl font-bold text-foreground">
-        Verify your identity
+        Verify your email
       </h2>
       <p className="mb-6 text-sm text-muted-foreground">
-        We'll send a 6-digit code to verify you
+        We'll send a 6-digit code to verify your email
       </p>
       <form onSubmit={handleSubmit(onSend)} className="space-y-4">
         <div>
-          <Label>Verification method</Label>
-          <Select
-            value={otpType}
-            onValueChange={(v) => setValue("otpType", v as "phone" | "email")}
-          >
-            <SelectTrigger className="mt-1.5">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="phone">Phone Number</SelectItem>
-              <SelectItem value="email">Email Address</SelectItem>
-            </SelectContent>
-          </Select>
-        </div>
-        <div>
-          <Label>{otpType === "phone" ? "Phone Number" : "Email"}</Label>
+          <Label>Email Address</Label>
           <div className="relative mt-1.5">
-            {otpType === "phone" ? (
-              <Phone className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-            ) : (
-              <Mail className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-            )}
+            <Mail className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
             <Input
-              placeholder={
-                otpType === "phone" ? "+234 801 234 5678" : "you@email.com"
-              }
+              type="email"
+              placeholder="you@email.com"
               className="pl-10"
               {...register("destination")}
             />
@@ -569,10 +548,12 @@ function StepAccount({
   onComplete,
   onBack,
   isSubmitting,
+  prefillEmail,
 }: {
   onComplete: (d: AccountForm) => void;
   onBack: () => void;
   isSubmitting: boolean;
+  prefillEmail?: string;
 }) {
   const {
     register,
@@ -580,6 +561,9 @@ function StepAccount({
     formState: { errors },
   } = useForm<AccountForm>({
     resolver: zodResolver(accountSchema),
+    defaultValues: {
+      email: prefillEmail || "",
+    },
   });
 
   return (
