@@ -72,11 +72,11 @@ export const api = new ApiClient(API_BASE_URL);
 
 // Auth endpoints
 export const authApi = {
-  sendOtp: (type: 'phone' | 'email', destination: string) =>
-    api.post('/auth/otp/send', { type, destination }),
+  sendOtp: (data: { type: 'phone' | 'email'; destination: string }) =>
+    api.post('/auth/otp/send', { type: data.type, destination: data.destination }),
 
-  verifyOtp: (otpId: string, code: string) =>
-    api.post('/auth/otp/verify', { otpId, code }),
+  verifyOtp: (data: { otpId: string; code: string }) =>
+    api.post('/auth/otp/verify', { otpId: data.otpId, code: data.code }),
 
   completeRegistration: (data: {
     verificationToken: string;
@@ -87,21 +87,21 @@ export const authApi = {
     role: 'patient' | 'doctor' | 'provider_admin';
   }) => api.post('/auth/register/complete', data),
 
-  login: (email: string, password: string) =>
-    api.post('/auth/login', { email, password }),
+  login: (data: { email: string; password: string }) =>
+    api.post('/auth/login', { email: data.email, password: data.password }),
 
   logout: () => api.post('/auth/logout'),
 
-  refreshToken: (refreshToken: string) =>
-    api.post('/auth/refresh', { refreshToken }),
+  refreshToken: (data: { refreshToken: string }) =>
+    api.post('/auth/refresh', { refreshToken: data.refreshToken }),
 
   getProfile: () => api.get('/auth/me'),
 
-  switchRole: (activeRole: string) =>
-    api.post('/auth/role/switch', { activeRole }),
+  switchRole: (data: { activeRole: string }) =>
+    api.post('/auth/role/switch', { activeRole: data.activeRole }),
 
-  addRole: (role: string) =>
-    api.post('/auth/role/add', { role }),
+  addRole: (data: { role: string }) =>
+    api.post('/auth/role/add', { role: data.role }),
 };
 
 // Patient endpoints

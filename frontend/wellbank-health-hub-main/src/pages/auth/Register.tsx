@@ -161,7 +161,7 @@ const Register = () => {
   const handleVerifyOtp = async (data: OtpVerifyForm) => {
     setIsSubmitting(true);
     try {
-      const res = await apiService.auth.verifyOtp(otpId!, data.code);
+      const res = await apiService.auth.verifyOtp({ otpId: otpId!, code: data.code });
       setVerificationToken((res.data as any).verificationToken);
       toast({ title: "Verified! ✅" });
       nextStep();

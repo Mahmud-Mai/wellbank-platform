@@ -65,7 +65,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
 
   const login = useCallback(async (email: string, password: string) => {
     try {
-      const res = await apiService.auth.login(email, password);
+      const res = await apiService.auth.login({ email, password });
       const data = res.data as any;
 
       // Handle both real (tokens + user) and mock (accessToken + user)
@@ -130,7 +130,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
   }, []);
 
   const switchRole = useCallback(async (role: UserRole) => {
-    await apiService.users.switchRole(role);
+    await apiService.users.switchRole({ activeRole: role });
     setState((prev) => {
       if (!prev.user) return prev;
       const updated = { ...prev.user, activeRole: role };
@@ -140,7 +140,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
   }, []);
 
   const addRole = useCallback(async (role: UserRole) => {
-    await apiService.users.addRole(role);
+    await apiService.users.addRole({ role });
     setState((prev) => {
       if (!prev.user) return prev;
       const newRoles = prev.user.roles.includes(role)

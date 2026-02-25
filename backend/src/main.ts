@@ -7,6 +7,7 @@ import helmet from "helmet";
 import compression from "compression";
 import { AppModule } from "./app.module";
 import { AllExceptionsFilter } from "./filters/all-exceptions.filter";
+import { LoggingInterceptor } from "./interceptors/logging.interceptor";
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule, {
@@ -46,6 +47,9 @@ async function bootstrap() {
 
   // Global exception filter
   app.useGlobalFilters(new AllExceptionsFilter());
+
+  // Global logging interceptor
+  app.useGlobalInterceptors(new LoggingInterceptor());
 
   // API prefix
   const apiPrefix = configService.get<string>("app.apiPrefix") ?? 'api/v1';
