@@ -7,6 +7,7 @@ import * as bcrypt from 'bcryptjs';
 import { User } from './entities/user.entity';
 import { RegisterDto, LoginDto, AuthResponseDto, EnableMfaDto, SendOtpDto, VerifyOtpDto, CompleteRegistrationDto } from './dto/auth.dto';
 import { UserRole } from '@wellbank/shared';
+import { EmailService } from '../email/email.service';
 
 @Injectable()
 export class AuthService {
@@ -15,6 +16,7 @@ export class AuthService {
     private userRepository: Repository<User>,
     private jwtService: JwtService,
     private configService: ConfigService,
+    private emailService: EmailService,
   ) {}
 
   async register(registerDto: RegisterDto): Promise<Partial<User>> {
@@ -179,10 +181,21 @@ export class AuthService {
 
   // OTP methods for new registration flow
   async sendOtp(sendOtpDto: SendOtpDto): Promise<{ otpId: string; expiresAt: Date }> {
-    // TODO: Implement actual OTP sending (SMS/Email)
-    // For now, return mock data
     const otpId = crypto.randomUUID();
+    const otp = Math.floor(100000 + Math.random() * 900000).toString();
     const expiresAt = new Date(Date.now() + 10 * 60 * 1000); // 10 minutes
+
+    // Send OTP via email
+    if (sendOtpDto.type === 'email' && sendOtpDto.destination) {
+      try {
+        await this.emailService.sendOtpEmail(sendOtpDto.destination, otp);
+      } catch (error) {
+        console.error('Failed to send OTP email:', error);
+      }
+    }
+
+    // TODO: Store OTP in database/redis for verification
+    // For now, we accept any 6-digit code in verifyOtp
 
     return { otpId, expiresAt };
   }
