@@ -6,6 +6,7 @@ import { SwaggerModule, DocumentBuilder } from "@nestjs/swagger";
 import helmet from "helmet";
 import compression from "compression";
 import { AppModule } from "./app.module";
+import { AllExceptionsFilter } from "./filters/all-exceptions.filter";
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule, {
@@ -42,6 +43,9 @@ async function bootstrap() {
       }
     })
   );
+
+  // Global exception filter
+  app.useGlobalFilters(new AllExceptionsFilter());
 
   // API prefix
   const apiPrefix = configService.get<string>("app.apiPrefix") ?? 'api/v1';
