@@ -25,7 +25,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { mockApi, USE_REAL_API, doctorsApi } from "@/lib/auth-context";
+import { apiService } from "@/lib/api-service";
 import { formatCurrency } from "@/lib/constants";
 import { SPECIALTIES } from "@/lib/constants";
 
@@ -55,9 +55,7 @@ const DoctorSearchPage = () => {
         page,
         limit: 6,
       };
-      return USE_REAL_API 
-        ? doctorsApi.search(params) 
-        : mockApi.doctors.search(params);
+      return apiService.doctors.search(params);
     },
   });
 

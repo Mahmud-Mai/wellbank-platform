@@ -22,10 +22,13 @@ async function bootstrap() {
   app.use(helmet());
   app.use(compression());
 
-  // Enable CORS
+  // Enable CORS - allow multiple origins for development
+  const corsOrigin = configService.get<string>("cors.origin");
   app.enableCors({
-    origin: configService.get<string>("cors.origin"),
-    credentials: true
+    origin: corsOrigin === '*' ? true : corsOrigin?.split(',').map(o => o.trim()) || true,
+    credentials: true,
+    methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
+    allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'],
   });
 
   // Global validation pipe

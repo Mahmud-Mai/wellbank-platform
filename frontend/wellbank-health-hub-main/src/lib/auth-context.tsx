@@ -1,9 +1,13 @@
-import React, { createContext, useContext, useState, useEffect, useCallback } from "react";
+import React, {
+  createContext,
+  useContext,
+  useState,
+  useEffect,
+  useCallback,
+} from "react";
 import type { User, UserRole } from "./types";
-import { api, authApi, patientsApi, doctorsApi, organizationsApi } from "./api-client";
-import { mockApi } from "./mock-api";
-
-const USE_REAL_API = import.meta.env.VITE_USE_REAL_API === "true";
+import { api } from "./api-client";
+import { apiService } from "./api-service";
 
 interface AuthState {
   user: User | null;
@@ -31,7 +35,9 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 const STORAGE_KEY = "wellbank_auth";
 const TOKEN_KEY = "access_token";
 
-export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
+  children,
+}) => {
   const [state, setState] = useState<AuthState>({
     user: null,
     isAuthenticated: false,
@@ -41,7 +47,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   useEffect(() => {
     const stored = localStorage.getItem(STORAGE_KEY);
     const token = localStorage.getItem(TOKEN_KEY);
-    
+
     if (stored && token) {
       try {
         const user = JSON.parse(stored) as User;
@@ -58,25 +64,24 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   }, []);
 
   const login = useCallback(async (email: string, password: string) => {
-    if (USE_REAL_API) {
-      try {
-        const res = await authApi.login(email, password);
-        const tokens = res.data as { accessToken: string; refreshToken: string; user: User };
-        
-        api.setToken(tokens.accessToken);
-        localStorage.setItem(TOKEN_KEY, tokens.accessToken);
-        localStorage.setItem(STORAGE_KEY, JSON.stringify(tokens.user));
-        
-        setState({ user: tokens.user, isAuthenticated: true, isLoading: false });
-      } catch (error) {
-        console.error("Login failed:", error);
-        throw error;
+    try {
+      const res = await apiService.auth.login(email, password);
+      const data = res.data as any;
+
+      // Handle both real (tokens + user) and mock (accessToken + user)
+      const accessToken = data.accessToken || data.tokens?.accessToken;
+      const user = data.user;
+
+      if (accessToken) {
+        api.setToken(accessToken);
+        localStorage.setItem(TOKEN_KEY, accessToken);
       }
-    } else {
-      const res = await mockApi.auth.login(email, password);
-      const user = res.data.user;
+
       localStorage.setItem(STORAGE_KEY, JSON.stringify(user));
       setState({ user, isAuthenticated: true, isLoading: false });
+    } catch (error) {
+      console.error("Login failed:", error);
+      throw error;
     }
   }, []);
 
@@ -89,55 +94,35 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       phoneNumber: string;
       role: "patient" | "doctor" | "provider_admin";
     }) => {
-      if (USE_REAL_API) {
-        try {
-          const res = await authApi.completeRegistration(data);
-          const userData = res.data as { userId: string; roles: string[]; activeRole: string };
-          
-          const user: User = {
-            id: userData.userId,
-            email: "",
-            roles: userData.roles as UserRole[],
-            activeRole: userData.activeRole as UserRole,
-            firstName: data.firstName,
-            lastName: data.lastName,
-            isVerified: true,
-            isKycVerified: false,
-            kycLevel: 0,
-            mfaEnabled: false,
-          };
-          
-          localStorage.setItem(STORAGE_KEY, JSON.stringify(user));
-          setState({ user, isAuthenticated: true, isLoading: false });
-        } catch (error) {
-          console.error("Registration failed:", error);
-          throw error;
-        }
-      } else {
-        const res = await mockApi.auth.completeRegistration(data);
+      try {
+        const res = await apiService.auth.completeRegistration(data);
+        const userData = res.data as any;
+
         const user: User = {
-          id: res.data.userId,
-          email: "",
-          roles: res.data.roles as UserRole[],
-          activeRole: res.data.activeRole as UserRole,
-          firstName: data.firstName,
-          lastName: data.lastName,
+          id: userData.userId || userData.id,
+          email: userData.email || "",
+          roles: (userData.roles || [data.role]) as UserRole[],
+          activeRole: (userData.activeRole || data.role) as UserRole,
+          firstName: userData.firstName || data.firstName,
+          lastName: userData.lastName || data.lastName,
           isVerified: true,
-          isKycVerified: false,
-          kycLevel: 0,
-          mfaEnabled: false,
+          isKycVerified: userData.isKycVerified || false,
+          kycLevel: userData.kycLevel || 0,
+          mfaEnabled: userData.mfaEnabled || false,
         };
+
         localStorage.setItem(STORAGE_KEY, JSON.stringify(user));
         setState({ user, isAuthenticated: true, isLoading: false });
+      } catch (error) {
+        console.error("Registration failed:", error);
+        throw error;
       }
     },
-    []
+    [],
   );
 
   const logout = useCallback(() => {
-    if (USE_REAL_API) {
-      authApi.logout().catch(console.error);
-    }
+    apiService.auth.logout().catch(console.error);
     localStorage.removeItem(STORAGE_KEY);
     localStorage.removeItem(TOKEN_KEY);
     api.setToken(null);
@@ -145,11 +130,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   }, []);
 
   const switchRole = useCallback(async (role: UserRole) => {
-    if (USE_REAL_API) {
-      await authApi.switchRole(role);
-    } else {
-      await mockApi.users.switchRole(role);
-    }
+    await apiService.users.switchRole(role);
     setState((prev) => {
       if (!prev.user) return prev;
       const updated = { ...prev.user, activeRole: role };
@@ -159,11 +140,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   }, []);
 
   const addRole = useCallback(async (role: UserRole) => {
-    if (USE_REAL_API) {
-      await authApi.addRole(role);
-    } else {
-      await mockApi.users.addRole(role);
-    }
+    await apiService.users.addRole(role);
     setState((prev) => {
       if (!prev.user) return prev;
       const newRoles = prev.user.roles.includes(role)
@@ -176,7 +153,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   }, []);
 
   return (
-    <AuthContext.Provider value={{ ...state, login, register, logout, switchRole, addRole }}>
+    <AuthContext.Provider
+      value={{ ...state, login, register, logout, switchRole, addRole }}
+    >
       {children}
     </AuthContext.Provider>
   );
@@ -188,5 +167,5 @@ export const useAuth = () => {
   return ctx;
 };
 
-// Export both APIs for use in components
-export { api, authApi, patientsApi, doctorsApi, organizationsApi, mockApi, USE_REAL_API };
+// Export APIs for use in components
+export { api, apiService };
