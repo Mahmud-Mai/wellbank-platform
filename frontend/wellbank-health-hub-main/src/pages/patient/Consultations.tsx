@@ -17,7 +17,7 @@ import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Input } from "@/components/ui/input";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { mockApi } from "@/lib/mock-api";
+import { apiService } from "@/lib/api-service";
 import { formatCurrency, formatDate } from "@/lib/constants";
 
 const statusColors: Record<string, string> = {
@@ -45,7 +45,7 @@ const ConsultationsPage = () => {
   const { data, isLoading } = useQuery({
     queryKey: ["consultations", tab, search, page],
     queryFn: () =>
-      mockApi.consultations.list({
+      apiService.consultations.list({
         status: tab,
         search,
         page,
@@ -60,7 +60,9 @@ const ConsultationsPage = () => {
     <div className="space-y-6 p-4 pb-24 sm:p-6 lg:pb-6">
       <div>
         <h1 className="text-2xl font-bold text-foreground">Consultations</h1>
-        <p className="text-sm text-muted-foreground">Your appointments and consultations</p>
+        <p className="text-sm text-muted-foreground">
+          Your appointments and consultations
+        </p>
       </div>
 
       {/* Search */}
@@ -78,12 +80,26 @@ const ConsultationsPage = () => {
       </div>
 
       {/* Tabs */}
-      <Tabs value={tab} onValueChange={(v) => { setTab(v); setPage(1); }}>
+      <Tabs
+        value={tab}
+        onValueChange={(v) => {
+          setTab(v);
+          setPage(1);
+        }}
+      >
         <TabsList className="w-full">
-          <TabsTrigger value="all" className="flex-1">All</TabsTrigger>
-          <TabsTrigger value="scheduled" className="flex-1">Scheduled</TabsTrigger>
-          <TabsTrigger value="completed" className="flex-1">Completed</TabsTrigger>
-          <TabsTrigger value="cancelled" className="flex-1">Cancelled</TabsTrigger>
+          <TabsTrigger value="all" className="flex-1">
+            All
+          </TabsTrigger>
+          <TabsTrigger value="scheduled" className="flex-1">
+            Scheduled
+          </TabsTrigger>
+          <TabsTrigger value="completed" className="flex-1">
+            Completed
+          </TabsTrigger>
+          <TabsTrigger value="cancelled" className="flex-1">
+            Cancelled
+          </TabsTrigger>
         </TabsList>
       </Tabs>
 
@@ -98,7 +114,9 @@ const ConsultationsPage = () => {
         <Card className="border-dashed">
           <CardContent className="flex flex-col items-center justify-center p-8 text-center">
             <Calendar className="mb-3 h-10 w-10 text-muted-foreground/40" />
-            <p className="text-sm text-muted-foreground">No consultations found</p>
+            <p className="text-sm text-muted-foreground">
+              No consultations found
+            </p>
             <Button variant="outline" size="sm" className="mt-3" asChild>
               <Link to="/doctors">Book a Doctor</Link>
             </Button>
@@ -118,25 +136,35 @@ const ConsultationsPage = () => {
                       <div className="flex-1 min-w-0">
                         <div className="flex items-start justify-between gap-2">
                           <div>
-                            <p className="font-medium text-foreground">{c.doctorName}</p>
+                            <p className="font-medium text-foreground">
+                              {c.doctorName}
+                            </p>
                             <div className="mt-1 flex items-center gap-2 text-xs text-muted-foreground">
                               {c.type === "telehealth" ? (
                                 <Video className="h-3 w-3" />
                               ) : (
                                 <MapPin className="h-3 w-3" />
                               )}
-                              <span>{c.type === "telehealth" ? "Video" : "In-person"}</span>
+                              <span>
+                                {c.type === "telehealth"
+                                  ? "Video"
+                                  : "In-person"}
+                              </span>
                               <span>·</span>
                               <span>{formatDate(c.scheduledAt)}</span>
                             </div>
                             {c.reason && (
-                              <p className="mt-1 truncate text-xs text-muted-foreground">{c.reason}</p>
+                              <p className="mt-1 truncate text-xs text-muted-foreground">
+                                {c.reason}
+                              </p>
                             )}
                           </div>
                           <ChevronRight className="mt-1 h-4 w-4 shrink-0 text-muted-foreground" />
                         </div>
                         <div className="mt-2 flex items-center gap-2">
-                          <Badge className={`text-[10px] ${statusColors[c.status] ?? ""}`}>
+                          <Badge
+                            className={`text-[10px] ${statusColors[c.status] ?? ""}`}
+                          >
                             {c.status}
                           </Badge>
                           <span className="text-sm font-medium text-foreground">
@@ -156,13 +184,23 @@ const ConsultationsPage = () => {
       {/* Pagination */}
       {pagination && pagination.totalPages > 1 && (
         <div className="flex items-center justify-center gap-2">
-          <Button variant="outline" size="sm" disabled={page <= 1} onClick={() => setPage((p) => p - 1)}>
+          <Button
+            variant="outline"
+            size="sm"
+            disabled={page <= 1}
+            onClick={() => setPage((p) => p - 1)}
+          >
             <ChevronLeft className="h-4 w-4" />
           </Button>
           <span className="text-sm text-muted-foreground">
             Page {page} of {pagination.totalPages}
           </span>
-          <Button variant="outline" size="sm" disabled={page >= pagination.totalPages} onClick={() => setPage((p) => p + 1)}>
+          <Button
+            variant="outline"
+            size="sm"
+            disabled={page >= pagination.totalPages}
+            onClick={() => setPage((p) => p + 1)}
+          >
             <ChevronRight className="h-4 w-4" />
           </Button>
         </div>

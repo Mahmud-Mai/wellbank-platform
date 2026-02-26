@@ -7,6 +7,7 @@ import * as bcrypt from 'bcryptjs';
 import { User } from './entities/user.entity';
 import { RegisterDto, LoginDto, AuthResponseDto, EnableMfaDto, SendOtpDto, VerifyOtpDto, CompleteRegistrationDto } from './dto/auth.dto';
 import { UserRole } from '@wellbank/shared';
+import { EmailService } from '../email/email.service';
 
 @Injectable()
 export class AuthService {
@@ -15,6 +16,7 @@ export class AuthService {
     private userRepository: Repository<User>,
     private jwtService: JwtService,
     private configService: ConfigService,
+    private emailService: EmailService,
   ) {}
 
   async register(registerDto: RegisterDto): Promise<Partial<User>> {
@@ -179,10 +181,21 @@ export class AuthService {
 
   // OTP methods for new registration flow
   async sendOtp(sendOtpDto: SendOtpDto): Promise<{ otpId: string; expiresAt: Date }> {
-    // TODO: Implement actual OTP sending (SMS/Email)
-    // For now, return mock data
     const otpId = crypto.randomUUID();
+    const otp = Math.floor(100000 + Math.random() * 900000).toString();
     const expiresAt = new Date(Date.now() + 10 * 60 * 1000); // 10 minutes
+
+    // Send OTP via email
+    if (sendOtpDto.type === 'email' && sendOtpDto.destination) {
+      try {
+        await this.emailService.sendOtpEmail(sendOtpDto.destination, otp);
+      } catch (error) {
+        console.error('Failed to send OTP email:', error);
+      }
+    }
+
+    // TODO: Store OTP in database/redis for verification
+    // For now, we accept any 6-digit code in verifyOtp
 
     return { otpId, expiresAt };
   }
@@ -204,25 +217,28 @@ export class AuthService {
     // TODO: Verify the verificationToken properly
     // For now, just create the user
 
-    const existingUser = await this.userRepository.findOne({
-      where: { email: completeDto.email },
-    });
+    // Check for existing user by email if provided
+    if (completeDto.email) {
+      const existingUser = await this.userRepository.findOne({
+        where: { email: completeDto.email },
+      });
 
-    if (existingUser) {
-      throw new ConflictException('User with this email already exists');
+      if (existingUser) {
+        throw new ConflictException('User with this email already exists');
+      }
     }
 
     const passwordHash = await bcrypt.hash(completeDto.password, 12);
 
     const user = this.userRepository.create({
-      email: completeDto.email,
+      email: completeDto.email || undefined,
       passwordHash,
       roles: [completeDto.role],
       activeRole: completeDto.role,
       phoneNumber: completeDto.phoneNumber,
       firstName: completeDto.firstName,
       lastName: completeDto.lastName,
-      isEmailVerified: true,
+      isEmailVerified: !!completeDto.email,
       ndprConsent: false,
       dataProcessingConsent: false,
       marketingConsent: false,
@@ -236,5 +252,95 @@ export class AuthService {
       roles: user.roles,
       activeRole: user.activeRole,
     };
+  }
+
+  // Registration state management
+  async saveRegistrationStep(
+    email: string,
+    step: number,
+    data: Record<string, unknown>,
+  ): Promise<{ step: number; data: Record<string, unknown> }> {
+    const registrationToken = crypto.randomUUID();
+    const tokenExpires = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000); // 7 days
+
+    let user = await this.userRepository.findOne({ where: { email } });
+
+    if (!user) {
+      user = this.userRepository.create({
+        email,
+        registrationStep: step,
+        registrationData: data,
+        registrationToken,
+        registrationTokenExpires: tokenExpires,
+      });
+    } else {
+      user.registrationStep = step;
+      user.registrationData = data;
+      user.registrationToken = registrationToken;
+      user.registrationTokenExpires = tokenExpires;
+    }
+
+    await this.userRepository.save(user);
+
+    return { step: user.registrationStep, data: user.registrationData || {} };
+  }
+
+  async getRegistrationState(
+    email: string,
+    token: string,
+  ): Promise<{ step: number; data: Record<string, unknown> } | null> {
+    const user = await this.userRepository.findOne({
+      where: { email, registrationToken: token },
+    });
+
+    if (!user) {
+      return null;
+    }
+
+    // Check if token is expired
+    if (user.registrationTokenExpires && user.registrationTokenExpires < new Date()) {
+      return null;
+    }
+
+    return {
+      step: user.registrationStep || 0,
+      data: user.registrationData || {},
+    };
+  }
+
+  async resumeRegistrationByEmail(
+    email: string,
+  ): Promise<{ step: number; data: Record<string, unknown> } | null> {
+    const user = await this.userRepository.findOne({
+      where: { email },
+    });
+
+    // Only return state if user hasn't completed registration
+    // (i.e., no password set yet)
+    if (!user || user.passwordHash) {
+      return null;
+    }
+
+    // Check if token is expired
+    if (user.registrationTokenExpires && user.registrationTokenExpires < new Date()) {
+      return null;
+    }
+
+    return {
+      step: user.registrationStep || 0,
+      data: user.registrationData || {},
+    };
+  }
+
+  async clearRegistrationState(email: string): Promise<void> {
+    await this.userRepository.update(
+      { email },
+      {
+        registrationStep: 0,
+        registrationData: undefined,
+        registrationToken: undefined,
+        registrationTokenExpires: undefined,
+      },
+    );
   }
 }

@@ -34,7 +34,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { toast } from "sonner";
-import { mockApi } from "@/lib/mock-api";
+import { apiService } from "@/lib/api-service";
 import { formatCurrency, formatDate } from "@/lib/constants";
 
 const fadeUp = {
@@ -56,16 +56,17 @@ const WalletPage = () => {
 
   const { data: wallet, isLoading: walletLoading } = useQuery({
     queryKey: ["wallet"],
-    queryFn: () => mockApi.wallet.get(),
+    queryFn: () => apiService.wallet.get(),
   });
 
   const { data: txData, isLoading: txLoading } = useQuery({
     queryKey: ["transactions", filter, page],
-    queryFn: () => mockApi.wallet.getTransactions({ type: filter, page, perPage: 5 }),
+    queryFn: () =>
+      apiService.wallet.getTransactions({ type: filter, page, perPage: 5 }),
   });
 
   const fundMutation = useMutation({
-    mutationFn: () => mockApi.wallet.fund(Number(fundAmount), fundMethod),
+    mutationFn: () => apiService.wallet.fund(Number(fundAmount), fundMethod),
     onSuccess: () => {
       toast.success("Funding initiated! Redirecting to payment gateway...");
       setFundOpen(false);
@@ -91,12 +92,19 @@ const WalletPage = () => {
       {walletLoading ? (
         <Skeleton className="h-44 w-full rounded-xl" />
       ) : (
-        <motion.div initial="hidden" animate="visible" variants={fadeUp} custom={0}>
+        <motion.div
+          initial="hidden"
+          animate="visible"
+          variants={fadeUp}
+          custom={0}
+        >
           <Card className="overflow-hidden border-0 gradient-primary shadow-glow">
             <CardContent className="p-6">
               <div className="flex items-start justify-between">
                 <div>
-                  <p className="text-sm text-primary-foreground/70">Available Balance</p>
+                  <p className="text-sm text-primary-foreground/70">
+                    Available Balance
+                  </p>
                   <p className="mt-1 text-3xl font-bold text-primary-foreground">
                     {formatCurrency(wallet?.data.balance ?? 0)}
                   </p>
@@ -122,7 +130,9 @@ const WalletPage = () => {
                     </DialogHeader>
                     <div className="space-y-4 py-4">
                       <div>
-                        <label className="mb-1.5 block text-sm font-medium text-foreground">Amount (₦)</label>
+                        <label className="mb-1.5 block text-sm font-medium text-foreground">
+                          Amount (₦)
+                        </label>
                         <Input
                           type="number"
                           placeholder="Enter amount"
@@ -131,17 +141,26 @@ const WalletPage = () => {
                         />
                       </div>
                       <div>
-                        <label className="mb-1.5 block text-sm font-medium text-foreground">Payment Method</label>
-                        <Select value={fundMethod} onValueChange={setFundMethod}>
+                        <label className="mb-1.5 block text-sm font-medium text-foreground">
+                          Payment Method
+                        </label>
+                        <Select
+                          value={fundMethod}
+                          onValueChange={setFundMethod}
+                        >
                           <SelectTrigger>
                             <SelectValue />
                           </SelectTrigger>
                           <SelectContent>
                             <SelectItem value="card">
-                              <span className="flex items-center gap-2"><CreditCard className="h-4 w-4" /> Debit Card</span>
+                              <span className="flex items-center gap-2">
+                                <CreditCard className="h-4 w-4" /> Debit Card
+                              </span>
                             </SelectItem>
                             <SelectItem value="bank_transfer">
-                              <span className="flex items-center gap-2"><Building2 className="h-4 w-4" /> Bank Transfer</span>
+                              <span className="flex items-center gap-2">
+                                <Building2 className="h-4 w-4" /> Bank Transfer
+                              </span>
                             </SelectItem>
                           </SelectContent>
                         </Select>
@@ -166,7 +185,11 @@ const WalletPage = () => {
                       </DialogClose>
                       <Button
                         onClick={() => fundMutation.mutate()}
-                        disabled={!fundAmount || Number(fundAmount) <= 0 || fundMutation.isPending}
+                        disabled={
+                          !fundAmount ||
+                          Number(fundAmount) <= 0 ||
+                          fundMutation.isPending
+                        }
                       >
                         {fundMutation.isPending ? "Processing..." : "Proceed"}
                       </Button>
@@ -180,12 +203,25 @@ const WalletPage = () => {
       )}
 
       {/* Transaction History */}
-      <motion.div initial="hidden" animate="visible" variants={fadeUp} custom={1}>
+      <motion.div
+        initial="hidden"
+        animate="visible"
+        variants={fadeUp}
+        custom={1}
+      >
         <div className="mb-3 flex items-center justify-between">
-          <h2 className="text-sm font-medium text-muted-foreground">Transaction History</h2>
+          <h2 className="text-sm font-medium text-muted-foreground">
+            Transaction History
+          </h2>
           <div className="flex items-center gap-2">
             <Filter className="h-3.5 w-3.5 text-muted-foreground" />
-            <Select value={filter} onValueChange={(v) => { setFilter(v); setPage(1); }}>
+            <Select
+              value={filter}
+              onValueChange={(v) => {
+                setFilter(v);
+                setPage(1);
+              }}
+            >
               <SelectTrigger className="h-8 w-28 text-xs">
                 <SelectValue />
               </SelectTrigger>
@@ -208,7 +244,9 @@ const WalletPage = () => {
           <Card className="border-dashed">
             <CardContent className="flex flex-col items-center justify-center p-8 text-center">
               <WalletIcon className="mb-3 h-10 w-10 text-muted-foreground/40" />
-              <p className="text-sm text-muted-foreground">No transactions found</p>
+              <p className="text-sm text-muted-foreground">
+                No transactions found
+              </p>
             </CardContent>
           </Card>
         ) : (
@@ -230,10 +268,17 @@ const WalletPage = () => {
                     )}
                   </div>
                   <div className="flex-1 min-w-0">
-                    <p className="truncate text-sm font-medium text-foreground">{tx.description}</p>
+                    <p className="truncate text-sm font-medium text-foreground">
+                      {tx.description}
+                    </p>
                     <div className="flex items-center gap-2">
-                      <p className="text-xs text-muted-foreground">{formatDate(tx.createdAt)}</p>
-                      <Badge variant="outline" className="text-[10px] px-1.5 py-0">
+                      <p className="text-xs text-muted-foreground">
+                        {formatDate(tx.createdAt)}
+                      </p>
+                      <Badge
+                        variant="outline"
+                        className="text-[10px] px-1.5 py-0"
+                      >
                         {tx.status}
                       </Badge>
                     </div>
@@ -241,12 +286,17 @@ const WalletPage = () => {
                   <div className="text-right">
                     <p
                       className={`text-sm font-semibold ${
-                        tx.type === "credit" ? "text-primary" : "text-foreground"
+                        tx.type === "credit"
+                          ? "text-primary"
+                          : "text-foreground"
                       }`}
                     >
-                      {tx.type === "credit" ? "+" : "-"}{formatCurrency(tx.amount)}
+                      {tx.type === "credit" ? "+" : "-"}
+                      {formatCurrency(tx.amount)}
                     </p>
-                    <p className="text-[10px] text-muted-foreground">{tx.reference}</p>
+                    <p className="text-[10px] text-muted-foreground">
+                      {tx.reference}
+                    </p>
                   </div>
                 </div>
               ))}

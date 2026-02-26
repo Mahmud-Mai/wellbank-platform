@@ -9,6 +9,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/lib/auth-context";
+import { apiService } from "@/lib/api-service";
 import wellbankLogo from "@/assets/wellbank-logo.jpeg";
 
 const loginSchema = z.object({
@@ -16,10 +17,17 @@ const loginSchema = z.object({
   password: z.string().min(1, "Password is required").max(128),
 });
 
+const resumeSchema = z.object({
+  email: z.string().trim().email("Invalid email").max(255),
+});
+
 type LoginForm = z.infer<typeof loginSchema>;
+type ResumeForm = z.infer<typeof resumeSchema>;
 
 const Login = () => {
   const [isLoading, setIsLoading] = useState(false);
+  const [showResume, setShowResume] = useState(false);
+  const [isResuming, setIsResuming] = useState(false);
   const navigate = useNavigate();
   const { login } = useAuth();
   const { toast } = useToast();
@@ -30,6 +38,14 @@ const Login = () => {
     formState: { errors },
   } = useForm<LoginForm>({
     resolver: zodResolver(loginSchema),
+  });
+
+  const {
+    register: registerResume,
+    handleSubmit: handleResumeSubmit,
+    formState: { errors: resumeErrors },
+  } = useForm<ResumeForm>({
+    resolver: zodResolver(resumeSchema),
   });
 
   const onSubmit = async (data: LoginForm) => {
@@ -46,6 +62,30 @@ const Login = () => {
       });
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  const onResume = async (data: ResumeForm) => {
+    setIsResuming(true);
+    try {
+      const res = await apiService.auth.resumeRegistration({ email: data.email });
+      if (res.status === 'success') {
+        navigate(`/register?email=${encodeURIComponent(data.email)}`);
+      } else {
+        toast({
+          title: "No registration found",
+          description: "Start a new registration instead.",
+          variant: "destructive",
+        });
+      }
+    } catch {
+      toast({
+        title: "Error",
+        description: "Could not resume registration.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsResuming(false);
     }
   };
 
@@ -147,6 +187,70 @@ const Login = () => {
               Create one
             </Link>
           </p>
+
+          {!showResume && (
+            <p className="mt-4 text-center text-sm text-muted-foreground">
+              Started registration before?{" "}
+              <button
+                type="button"
+                onClick={() => setShowResume(true)}
+                className="text-primary hover:underline"
+              >
+                Continue registration
+              </button>
+            </p>
+          )}
+
+          {showResume && (
+            <div className="mt-6 rounded-lg border border-border p-4">
+              <h3 className="mb-3 text-sm font-medium">Continue your registration</h3>
+              <form onSubmit={handleResumeSubmit(onResume)} className="space-y-3">
+                <div>
+                  <Label htmlFor="resumeEmail">Email used during registration</Label>
+                  <div className="relative mt-1.5">
+                    <Mail className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                    <Input
+                      id="resumeEmail"
+                      type="email"
+                      placeholder="you@email.com"
+                      className="pl-10"
+                      {...registerResume("email")}
+                    />
+                  </div>
+                  {resumeErrors.email && (
+                    <p className="mt-1 text-xs text-destructive">{resumeErrors.email.message}</p>
+                  )}
+                </div>
+                <div className="flex gap-2">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => setShowResume(false)}
+                    className="flex-1"
+                  >
+                    Cancel
+                  </Button>
+                  <Button
+                    type="submit"
+                    variant="hero"
+                    className="flex-1"
+                    disabled={isResuming}
+                  >
+                    {isResuming ? (
+                      <>
+                        <Loader2 className="mr-1 h-4 w-4 animate-spin" />
+                        Checking...
+                      </>
+                    ) : (
+                      <>
+                        Continue <ArrowRight className="ml-1 h-4 w-4" />
+                      </>
+                    )}
+                  </Button>
+                </div>
+              </form>
+            </div>
+          )}
         </div>
       </div>
     </div>

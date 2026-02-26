@@ -10,7 +10,13 @@ import { getDatabaseConfig } from "./config/database.config";
 import { getLoggerConfig } from "./config/logger.config";
 import { AppController } from "./app.controller";
 import { AppService } from "./app.service";
+import { EmailModule } from "./modules/email/email.module";
 import { AuthModule } from "./modules/auth/auth.module";
+import { OrganizationsModule } from "./modules/organizations/organizations.module";
+import { BankAccountsModule } from "./modules/bank-accounts/bank-accounts.module";
+import { DocumentsModule } from "./modules/documents/documents.module";
+import { PatientsModule } from "./modules/patients/patients.module";
+import { DoctorsModule } from "./modules/doctors/doctors.module";
 
 @Module({
   imports: [
@@ -64,7 +70,13 @@ import { AuthModule } from "./modules/auth/auth.module";
     ScheduleModule.forRoot(),
 
     // Feature modules
+    EmailModule,
     AuthModule,
+    OrganizationsModule,
+    BankAccountsModule,
+    DocumentsModule,
+    PatientsModule,
+    DoctorsModule,
   ],
   controllers: [AppController],
   providers: [AppService]

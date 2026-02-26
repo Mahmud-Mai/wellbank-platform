@@ -1,6 +1,13 @@
-import React, { createContext, useContext, useState, useEffect, useCallback } from "react";
+import React, {
+  createContext,
+  useContext,
+  useState,
+  useEffect,
+  useCallback,
+} from "react";
 import type { User, UserRole } from "./types";
-import { mockApi } from "./mock-api";
+import { api } from "./api-client";
+import { apiService } from "./api-service";
 
 interface AuthState {
   user: User | null;
@@ -26,8 +33,11 @@ interface AuthContextType extends AuthState {
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 const STORAGE_KEY = "wellbank_auth";
+const TOKEN_KEY = "access_token";
 
-export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
+  children,
+}) => {
   const [state, setState] = useState<AuthState>({
     user: null,
     isAuthenticated: false,
@@ -36,12 +46,16 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   useEffect(() => {
     const stored = localStorage.getItem(STORAGE_KEY);
-    if (stored) {
+    const token = localStorage.getItem(TOKEN_KEY);
+
+    if (stored && token) {
       try {
         const user = JSON.parse(stored) as User;
+        api.setToken(token);
         setState({ user, isAuthenticated: true, isLoading: false });
       } catch {
         localStorage.removeItem(STORAGE_KEY);
+        localStorage.removeItem(TOKEN_KEY);
         setState((s) => ({ ...s, isLoading: false }));
       }
     } else {
@@ -50,10 +64,25 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   }, []);
 
   const login = useCallback(async (email: string, password: string) => {
-    const res = await mockApi.auth.login(email, password);
-    const user = res.data.user;
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(user));
-    setState({ user, isAuthenticated: true, isLoading: false });
+    try {
+      const res = await apiService.auth.login({ email, password });
+      const data = res.data as any;
+
+      // Handle both real (tokens + user) and mock (accessToken + user)
+      const accessToken = data.accessToken || data.tokens?.accessToken;
+      const user = data.user;
+
+      if (accessToken) {
+        api.setToken(accessToken);
+        localStorage.setItem(TOKEN_KEY, accessToken);
+      }
+
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(user));
+      setState({ user, isAuthenticated: true, isLoading: false });
+    } catch (error) {
+      console.error("Login failed:", error);
+      throw error;
+    }
   }, []);
 
   const register = useCallback(
@@ -65,32 +94,43 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       phoneNumber: string;
       role: "patient" | "doctor" | "provider_admin";
     }) => {
-      const res = await mockApi.auth.completeRegistration(data);
-      const user: User = {
-        id: res.data.userId,
-        email: "",
-        roles: res.data.roles as UserRole[],
-        activeRole: res.data.activeRole as UserRole,
-        firstName: data.firstName,
-        lastName: data.lastName,
-        isVerified: true,
-        isKycVerified: false,
-        kycLevel: 0,
-        mfaEnabled: false,
-      };
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(user));
-      setState({ user, isAuthenticated: true, isLoading: false });
+      try {
+        const res = await apiService.auth.completeRegistration(data);
+        const userData = res.data as any;
+
+        const user: User = {
+          id: userData.userId || userData.id,
+          email: userData.email || "",
+          roles: (userData.roles || [data.role]) as UserRole[],
+          activeRole: (userData.activeRole || data.role) as UserRole,
+          firstName: userData.firstName || data.firstName,
+          lastName: userData.lastName || data.lastName,
+          isVerified: true,
+          isKycVerified: userData.isKycVerified || false,
+          kycLevel: userData.kycLevel || 0,
+          mfaEnabled: userData.mfaEnabled || false,
+        };
+
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(user));
+        setState({ user, isAuthenticated: true, isLoading: false });
+      } catch (error) {
+        console.error("Registration failed:", error);
+        throw error;
+      }
     },
-    []
+    [],
   );
 
   const logout = useCallback(() => {
+    apiService.auth.logout().catch(console.error);
     localStorage.removeItem(STORAGE_KEY);
+    localStorage.removeItem(TOKEN_KEY);
+    api.setToken(null);
     setState({ user: null, isAuthenticated: false, isLoading: false });
   }, []);
 
   const switchRole = useCallback(async (role: UserRole) => {
-    await mockApi.users.switchRole(role);
+    await apiService.users.switchRole({ activeRole: role });
     setState((prev) => {
       if (!prev.user) return prev;
       const updated = { ...prev.user, activeRole: role };
@@ -100,10 +140,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   }, []);
 
   const addRole = useCallback(async (role: UserRole) => {
-    await mockApi.users.addRole(role);
+    await apiService.users.addRole({ role });
     setState((prev) => {
       if (!prev.user) return prev;
-      const newRoles = prev.user.roles.includes(role) ? prev.user.roles : [...prev.user.roles, role];
+      const newRoles = prev.user.roles.includes(role)
+        ? prev.user.roles
+        : [...prev.user.roles, role];
       const updated = { ...prev.user, roles: newRoles };
       localStorage.setItem(STORAGE_KEY, JSON.stringify(updated));
       return { ...prev, user: updated };
@@ -111,7 +153,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   }, []);
 
   return (
-    <AuthContext.Provider value={{ ...state, login, register, logout, switchRole, addRole }}>
+    <AuthContext.Provider
+      value={{ ...state, login, register, logout, switchRole, addRole }}
+    >
       {children}
     </AuthContext.Provider>
   );
@@ -122,3 +166,6 @@ export const useAuth = () => {
   if (!ctx) throw new Error("useAuth must be used within AuthProvider");
   return ctx;
 };
+
+// Export APIs for use in components
+export { api, apiService };

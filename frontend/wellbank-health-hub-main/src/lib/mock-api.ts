@@ -325,7 +325,7 @@ export const mockApi = {
         data: { otpId: "otp-" + Date.now(), expiresAt: new Date(Date.now() + 5 * 60000).toISOString() },
       };
     },
-    verifyOtp: async (_otpId: string, _code: string) => {
+    verifyOtp: async (data: { otpId: string; code: string }) => {
       await delay(600);
       return {
         status: "success" as const,
@@ -353,7 +353,7 @@ export const mockApi = {
         },
       };
     },
-    login: async (_email: string, _password: string, _mfaCode?: string) => {
+    login: async (data: { email: string; password: string; mfaCode?: string }) => {
       await delay(800);
       return {
         status: "success" as const,
@@ -365,7 +365,7 @@ export const mockApi = {
         },
       };
     },
-    refresh: async (_refreshToken: string) => {
+    refresh: async (data: { refreshToken: string }) => {
       await delay(300);
       return {
         status: "success" as const,
@@ -377,6 +377,23 @@ export const mockApi = {
       await delay(200);
       return { status: "success" as const, message: "Logged out", data: null };
     },
+    // Registration state management
+    saveRegistrationStep: async (data: { email: string; step: number; data: Record<string, unknown> }) => {
+      await delay(200);
+      return { status: "success" as const, data: { step: data.step, data: data.data } };
+    },
+    getRegistrationState: async (_data: { email: string; token: string }) => {
+      await delay(200);
+      return { status: "error" as const, message: "No registration state found" };
+    },
+    resumeRegistration: async (_data: { email: string }) => {
+      await delay(200);
+      return { status: "error" as const, message: "No registration to resume" };
+    },
+    clearRegistrationState: async (_data: { email: string }) => {
+      await delay(200);
+      return { status: "success" as const, message: "Registration state cleared" };
+    },
   },
   users: {
     getMe: async () => {
@@ -387,14 +404,14 @@ export const mockApi = {
       await delay();
       return { status: "success" as const, message: "Updated", data: { ...mockUser, ...data } };
     },
-    addRole: async (role: string) => {
+    addRole: async (data: { role: string }) => {
       await delay();
-      const roles = [...mockUser.roles, role as User["activeRole"]];
+      const roles = [...mockUser.roles, data.role as User["activeRole"]];
       return { status: "success" as const, message: "Role added", data: { roles, activeRole: mockUser.activeRole } };
     },
-    switchRole: async (activeRole: string) => {
+    switchRole: async (data: { activeRole: string }) => {
       await delay(300);
-      return { status: "success" as const, message: "Role switched", data: { activeRole } };
+      return { status: "success" as const, message: "Role switched", data: { activeRole: data.activeRole } };
     },
   },
   patients: {

@@ -11,13 +11,21 @@ export class AppController {
   @ApiOperation({ summary: "Health check endpoint" })
   @ApiResponse({ status: 200, description: "Service is healthy" })
   getHealth() {
-    return this.appService.getHealth();
+    const health = this.appService.getHealth();
+    return {
+      status: "success",
+      data: health,
+    };
   }
 
   @Get()
   @ApiOperation({ summary: "API information" })
   @ApiResponse({ status: 200, description: "Returns API information" })
   getInfo() {
-    return this.appService.getInfo();
+    const info = this.appService.getInfo();
+    return {
+      status: "success",
+      data: info,
+    };
   }
 }

@@ -137,8 +137,9 @@ export class CompleteRegistrationDto {
   verificationToken: string;
 
   @ApiProperty({ example: 'john@example.com' })
+  @IsOptional()
   @IsEmail()
-  email: string;
+  email?: string;
 
   @ApiProperty({ example: 'SecureP@ss123' })
   @IsString()
