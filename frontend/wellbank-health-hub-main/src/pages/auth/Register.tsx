@@ -1255,8 +1255,19 @@ function StepDoctorProfessional({
     specialty: "",
     yearsExperience: "",
     consultationFee: "",
+    consultationTypes: [] as string[],
+    hospitalAffiliation: "",
     bio: "",
   });
+
+  const toggleConsultationType = (type: string) => {
+    setFormData((prev) => ({
+      ...prev,
+      consultationTypes: prev.consultationTypes.includes(type)
+        ? prev.consultationTypes.filter((t) => t !== type)
+        : [...prev.consultationTypes, type],
+    }));
+  };
 
   return (
     <StepWrapper>
@@ -1298,6 +1309,26 @@ function StepDoctorProfessional({
               value={formData.consultationFee}
               onChange={(e) => setFormData({ ...formData, consultationFee: e.target.value })}
             />
+          </div>
+        </div>
+
+        <div>
+          <Label>Consultation Types</Label>
+          <div className="mt-2 flex gap-4">
+            {["Virtual", "Physical"].map((t) => (
+              <div key={t} className="flex items-center gap-2">
+                <input
+                  type="checkbox"
+                  id={`ct-${t}`}
+                  checked={formData.consultationTypes.includes(t)}
+                  onChange={() => toggleConsultationType(t)}
+                  className="h-4 w-4"
+                />
+                <label htmlFor={`ct-${t}`} className="cursor-pointer text-sm">
+                  {t}
+                </label>
+              </div>
+            ))}
           </div>
         </div>
 
