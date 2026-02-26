@@ -271,6 +271,8 @@ export class AuthService {
 
     let user = await this.userRepository.findOne({ where: { email } });
 
+    // Create user if doesn't exist (for early registration steps before password is set)
+    // passwordHash will be set when user completes registration in Step 4
     if (!user) {
       user = this.userRepository.create({
         email,
