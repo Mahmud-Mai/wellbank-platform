@@ -102,6 +102,19 @@ export const authApi = {
 
   addRole: (data: { role: string }) =>
     api.post('/auth/role/add', { role: data.role }),
+
+  // Registration state management
+  saveRegistrationStep: (data: { email: string; step: number; data: Record<string, unknown> }) =>
+    api.post('/auth/register/save-step', data),
+
+  getRegistrationState: (data: { email: string; token: string }) =>
+    api.post('/auth/register/state', data),
+
+  resumeRegistration: (data: { email: string }) =>
+    api.post('/auth/register/resume', data),
+
+  clearRegistrationState: (data: { email: string }) =>
+    api.post('/auth/register/clear', data),
 };
 
 // Patient endpoints

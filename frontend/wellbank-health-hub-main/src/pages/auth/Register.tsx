@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate, Link, useSearchParams } from "react-router-dom";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -110,6 +110,7 @@ const roleOptions = [
 const Register = () => {
   const [searchParams] = useSearchParams();
   const initialRole = searchParams.get("role") as RoleForm["role"] | null;
+  const resumeEmail = searchParams.get("email");
 
   const [currentStep, setCurrentStep] = useState(initialRole ? 2 : 1);
   const [selectedRole, setSelectedRole] = useState<RoleForm["role"] | null>(
@@ -121,12 +122,65 @@ const Register = () => {
   );
   const [otpDestination, setOtpDestination] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isResuming, setIsResuming] = useState(false);
 
   const navigate = useNavigate();
   const { register: authRegister } = useAuth();
   const { toast } = useToast();
 
-  const nextStep = () => setCurrentStep((s) => Math.min(s + 1, 4));
+  // Check for existing registration on page load
+  useEffect(() => {
+    const checkExistingRegistration = async () => {
+      if (resumeEmail) {
+        setIsResuming(true);
+        try {
+          const res = await apiService.auth.resumeRegistration({ email: resumeEmail });
+          if (res.status === 'success' && res.data) {
+            const state = res.data as { step: number; data: Record<string, unknown> };
+            
+            // Restore state
+            if (state.data.role) setSelectedRole(state.data.role as RoleForm["role"]);
+            if (state.data.email) setOtpDestination(state.data.email as string);
+            if (state.data.verificationToken) setVerificationToken(state.data.verificationToken as string);
+            
+            // Jump to saved step
+            const step = Math.max(2, state.step);
+            setCurrentStep(step);
+            
+            toast({
+              title: "Welcome back!",
+              description: "Continue where you left off.",
+            });
+          }
+        } catch (error) {
+          console.error("Failed to resume registration:", error);
+        } finally {
+          setIsResuming(false);
+        }
+      }
+    };
+
+    checkExistingRegistration();
+  }, [resumeEmail, toast]);
+
+  // Save registration step to backend
+  const saveRegistrationStep = async (step: number, data: Record<string, unknown>) => {
+    if (otpDestination) {
+      try {
+        await apiService.auth.saveRegistrationStep({
+          email: otpDestination,
+          step,
+          data: { ...data, role: selectedRole, email: otpDestination },
+        });
+      } catch (error) {
+        console.error("Failed to save registration step:", error);
+      }
+    }
+  };
+
+  const nextStep = () => {
+    setCurrentStep((s) => Math.min(s + 1, 4));
+  };
   const prevStep = () => setCurrentStep((s) => Math.max(s - 1, 1));
 
   // Step 1: Select Role
@@ -146,6 +200,10 @@ const Register = () => {
       const resData = res.data as { otpId: string };
       setOtpId(resData.otpId);
       setOtpDestination(data.destination);
+      
+      // Save step 1 (role selection)
+      await saveRegistrationStep(1, { role: selectedRole });
+      
       toast({
         title: "OTP Sent! 📧",
         description: `Check your email for the code.`,
@@ -163,7 +221,12 @@ const Register = () => {
     setIsSubmitting(true);
     try {
       const res = await apiService.auth.verifyOtp({ otpId: otpId!, code: data.code });
-      setVerificationToken((res.data as any).verificationToken);
+      const vToken = (res.data as { verificationToken: string }).verificationToken;
+      setVerificationToken(vToken);
+      
+      // Save step 2 (email verified)
+      await saveRegistrationStep(2, { verificationToken: vToken, email: otpDestination });
+      
       toast({ title: "Verified! ✅" });
       nextStep();
     } catch {
@@ -177,6 +240,13 @@ const Register = () => {
   const handleComplete = async (data: AccountForm) => {
     setIsSubmitting(true);
     try {
+      // Save step 3 (account details) before completing
+      await saveRegistrationStep(3, { 
+        firstName: data.firstName, 
+        lastName: data.lastName,
+        phoneNumber: data.phoneNumber,
+      });
+      
       await authRegister({
         verificationToken: verificationToken!,
         password: data.password,
@@ -185,15 +255,15 @@ const Register = () => {
         phoneNumber: data.phoneNumber,
         role: selectedRole!,
       });
+      
+      // Clear registration state after successful registration
+      await apiService.auth.clearRegistrationState({ email: otpDestination });
+      
       toast({
         title: "Welcome to WellBank! 🎉",
-        description: "Let's complete your profile.",
+        description: "Your account has been created.",
       });
-      // Redirect to role-specific onboarding
-      if (selectedRole === "patient") navigate("/onboarding/patient");
-      else if (selectedRole === "doctor") navigate("/onboarding/doctor");
-      else if (selectedRole === "provider_admin") navigate("/organization/new");
-      else navigate("/dashboard");
+      navigate("/dashboard");
     } catch {
       toast({ title: "Registration failed", variant: "destructive" });
     } finally {

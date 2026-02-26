@@ -253,4 +253,94 @@ export class AuthService {
       activeRole: user.activeRole,
     };
   }
+
+  // Registration state management
+  async saveRegistrationStep(
+    email: string,
+    step: number,
+    data: Record<string, unknown>,
+  ): Promise<{ step: number; data: Record<string, unknown> }> {
+    const registrationToken = crypto.randomUUID();
+    const tokenExpires = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000); // 7 days
+
+    let user = await this.userRepository.findOne({ where: { email } });
+
+    if (!user) {
+      user = this.userRepository.create({
+        email,
+        registrationStep: step,
+        registrationData: data,
+        registrationToken,
+        registrationTokenExpires: tokenExpires,
+      });
+    } else {
+      user.registrationStep = step;
+      user.registrationData = data;
+      user.registrationToken = registrationToken;
+      user.registrationTokenExpires = tokenExpires;
+    }
+
+    await this.userRepository.save(user);
+
+    return { step: user.registrationStep, data: user.registrationData || {} };
+  }
+
+  async getRegistrationState(
+    email: string,
+    token: string,
+  ): Promise<{ step: number; data: Record<string, unknown> } | null> {
+    const user = await this.userRepository.findOne({
+      where: { email, registrationToken: token },
+    });
+
+    if (!user) {
+      return null;
+    }
+
+    // Check if token is expired
+    if (user.registrationTokenExpires && user.registrationTokenExpires < new Date()) {
+      return null;
+    }
+
+    return {
+      step: user.registrationStep || 0,
+      data: user.registrationData || {},
+    };
+  }
+
+  async resumeRegistrationByEmail(
+    email: string,
+  ): Promise<{ step: number; data: Record<string, unknown> } | null> {
+    const user = await this.userRepository.findOne({
+      where: { email },
+    });
+
+    // Only return state if user hasn't completed registration
+    // (i.e., no password set yet)
+    if (!user || user.passwordHash) {
+      return null;
+    }
+
+    // Check if token is expired
+    if (user.registrationTokenExpires && user.registrationTokenExpires < new Date()) {
+      return null;
+    }
+
+    return {
+      step: user.registrationStep || 0,
+      data: user.registrationData || {},
+    };
+  }
+
+  async clearRegistrationState(email: string): Promise<void> {
+    await this.userRepository.update(
+      { email },
+      {
+        registrationStep: 0,
+        registrationData: undefined,
+        registrationToken: undefined,
+        registrationTokenExpires: undefined,
+      },
+    );
+  }
 }

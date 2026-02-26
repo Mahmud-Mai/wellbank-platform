@@ -207,4 +207,72 @@ export class AuthController {
       data: req.user,
     };
   }
+
+  // Registration state management
+  @Post('register/save-step')
+  @ApiOperation({ summary: 'Save registration step data' })
+  @ApiResponse({ status: 200, description: 'Registration step saved' })
+  async saveRegistrationStep(
+    @Body() body: { email: string; step: number; data: Record<string, unknown> },
+  ) {
+    const result = await this.authService.saveRegistrationStep(
+      body.email,
+      body.step,
+      body.data,
+    );
+    return {
+      status: 'success',
+      data: result,
+    };
+  }
+
+  @Post('register/state')
+  @ApiOperation({ summary: 'Get registration state by email' })
+  @ApiResponse({ status: 200, description: 'Registration state returned' })
+  @ApiResponse({ status: 404, description: 'No registration state found' })
+  async getRegistrationState(
+    @Body() body: { email: string; token: string },
+  ) {
+    const result = await this.authService.getRegistrationState(body.email, body.token);
+    if (!result) {
+      return {
+        status: 'error',
+        message: 'No registration state found or token expired',
+      };
+    }
+    return {
+      status: 'success',
+      data: result,
+    };
+  }
+
+  @Post('register/resume')
+  @ApiOperation({ summary: 'Resume registration by email' })
+  @ApiResponse({ status: 200, description: 'Registration state returned' })
+  @ApiResponse({ status: 404, description: 'No registration to resume' })
+  async resumeRegistration(@Body() body: { email: string }) {
+    const result = await this.authService.resumeRegistrationByEmail(body.email);
+    if (!result) {
+      return {
+        status: 'error',
+        message: 'No registration to resume',
+      };
+    }
+    return {
+      status: 'success',
+      data: result,
+    };
+  }
+
+  @Post('register/clear')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Clear registration state' })
+  @ApiResponse({ status: 200, description: 'Registration state cleared' })
+  async clearRegistrationState(@Body() body: { email: string }) {
+    await this.authService.clearRegistrationState(body.email);
+    return {
+      status: 'success',
+      message: 'Registration state cleared',
+    };
+  }
 }

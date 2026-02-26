@@ -377,6 +377,23 @@ export const mockApi = {
       await delay(200);
       return { status: "success" as const, message: "Logged out", data: null };
     },
+    // Registration state management
+    saveRegistrationStep: async (data: { email: string; step: number; data: Record<string, unknown> }) => {
+      await delay(200);
+      return { status: "success" as const, data: { step: data.step, data: data.data } };
+    },
+    getRegistrationState: async (_data: { email: string; token: string }) => {
+      await delay(200);
+      return { status: "error" as const, message: "No registration state found" };
+    },
+    resumeRegistration: async (_data: { email: string }) => {
+      await delay(200);
+      return { status: "error" as const, message: "No registration to resume" };
+    },
+    clearRegistrationState: async (_data: { email: string }) => {
+      await delay(200);
+      return { status: "success" as const, message: "Registration state cleared" };
+    },
   },
   users: {
     getMe: async () => {

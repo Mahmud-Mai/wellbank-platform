@@ -87,6 +87,18 @@ export class User {
   @Column({ default: false })
   marketingConsent: boolean;
 
+  @Column({ type: 'int', default: 0 })
+  registrationStep: number;
+
+  @Column({ type: 'jsonb', nullable: true })
+  registrationData: Record<string, unknown>;
+
+  @Column({ nullable: true })
+  registrationToken: string;
+
+  @Column({ nullable: true })
+  registrationTokenExpires: Date;
+
   @CreateDateColumn()
   createdAt: Date;
 
