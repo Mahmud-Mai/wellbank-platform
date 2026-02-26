@@ -78,4 +78,7 @@ export default () => ({
   sentry: {
     dsn: process.env.SENTRY_DSN ?? '',
   },
+  registration: {
+    tokenTtlDays: parseInt(process.env.REGISTRATION_TOKEN_TTL_DAYS ?? '7', 10),
+  },
 });

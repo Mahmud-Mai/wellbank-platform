@@ -189,14 +189,16 @@ export enum ProviderType {
  * - We model these as ORGANIZATIONS created by provider_admin users
  * 
  * All are businesses (not individual people):
- * - hospital, laboratory, pharmacy, clinic = healthcare facilities
+ * - hospital, laboratory, pharmacy = healthcare facilities
  * - insurance, emergency, logistics = service providers
+ * 
+ * NOTE: "Clinic" is handled as a FacilityType within HOSPITAL organization type
+ * (see FacilityType.PRIMARY_CARE_CLINIC)
  */
 export enum OrganizationType {
   HOSPITAL = "hospital",
   LABORATORY = "laboratory",
   PHARMACY = "pharmacy",
-  CLINIC = "clinic",
   INSURANCE = "insurance",
   EMERGENCY = "emergency",
   LOGISTICS = "logistics"
@@ -307,7 +309,6 @@ export enum DocumentType {
   HOSPITAL_OPERATING_LICENSE = "hospital_operating_license",
   ENVIRONMENTAL_PERMIT = "environmental_permit",
   MEDICAL_DIRECTOR_LICENSE = "medical_director_license",
-  NHIA_ACCREDITATION = "nhia_accreditation",
 
   // Ambulance Documents
   STATE_MINISTRY_APPROVAL = "state_ministry_approval",

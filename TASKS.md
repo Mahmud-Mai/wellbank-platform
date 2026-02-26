@@ -43,12 +43,17 @@
 - [x] clearRegistrationState API endpoint
 - [x] Email service with MailHog integration
 
+### Backend Tasks ✅ COMPLETED
+- [x] Add TTL config for registration state (ENV variable: REGISTRATION_TOKEN_TTL_DAYS)
+- [x] Auto-approve patient logic - patients are ACTIVE after registration
+- [x] Pending approval flow - doctors/provider admins are PENDING until admin approval
+- [x] Update OrganizationType enum (removed CLINIC, use FacilityType instead)
+
 ### Pending Backend Tasks
-- [ ] Add TTL config for registration state (ENV variable)
-- [ ] Document upload endpoints (for ID, certifications, insurance cards)
-- [ ] Auto-approve patient logic after verification
-- [ ] Pending approval flow for doctors/provider admins
-- [ ] Update OrganizationType enum (remove CLINIC, use FacilityType instead)
+- [ ] Document upload service (needs S3/Minio integration)
+- [ ] Public endpoint for document uploads during registration
+- [ ] Admin notification when doctor/provider admin registers
+- [ ] Admin approval workflow endpoints
 
 ---
 
