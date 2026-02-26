@@ -6,7 +6,7 @@ import { ConfigService } from '@nestjs/config';
 import * as bcrypt from 'bcryptjs';
 import { User } from './entities/user.entity';
 import { RegisterDto, LoginDto, AuthResponseDto, EnableMfaDto, SendOtpDto, VerifyOtpDto, CompleteRegistrationDto } from './dto/auth.dto';
-import { UserRole } from '@wellbank/shared';
+import { UserRole, ProviderStatus } from '@wellbank/shared';
 import { EmailService } from '../email/email.service';
 
 @Injectable()
@@ -214,9 +214,6 @@ export class AuthService {
   }
 
   async completeRegistration(completeDto: CompleteRegistrationDto): Promise<Partial<User>> {
-    // TODO: Verify the verificationToken properly
-    // For now, just create the user
-
     // Check for existing user by email if provided
     if (completeDto.email) {
       const existingUser = await this.userRepository.findOne({
@@ -230,6 +227,10 @@ export class AuthService {
 
     const passwordHash = await bcrypt.hash(completeDto.password, 12);
 
+    // Design Decision: Patients are auto-approved, Doctors/Provider Admins need admin approval
+    const needsApproval = [UserRole.DOCTOR, UserRole.PROVIDER_ADMIN].includes(completeDto.role);
+    const initialStatus = needsApproval ? ProviderStatus.PENDING : ProviderStatus.ACTIVE;
+
     const user = this.userRepository.create({
       email: completeDto.email || undefined,
       passwordHash,
@@ -239,6 +240,7 @@ export class AuthService {
       firstName: completeDto.firstName,
       lastName: completeDto.lastName,
       isEmailVerified: !!completeDto.email,
+      providerStatus: initialStatus,
       ndprConsent: false,
       dataProcessingConsent: false,
       marketingConsent: false,
@@ -246,11 +248,14 @@ export class AuthService {
 
     await this.userRepository.save(user);
 
+    // TODO: Send notification email to admin for approval if role needs approval
+
     return {
       id: user.id,
       email: user.email,
       roles: user.roles,
       activeRole: user.activeRole,
+      providerStatus: user.providerStatus,
     };
   }
 
@@ -261,7 +266,8 @@ export class AuthService {
     data: Record<string, unknown>,
   ): Promise<{ step: number; data: Record<string, unknown> }> {
     const registrationToken = crypto.randomUUID();
-    const tokenExpires = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000); // 7 days
+    const ttlDays = this.configService.get<number>('registration.tokenTtlDays') ?? 7;
+    const tokenExpires = new Date(Date.now() + ttlDays * 24 * 60 * 60 * 1000);
 
     let user = await this.userRepository.findOne({ where: { email } });
 
