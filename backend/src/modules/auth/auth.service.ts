@@ -219,15 +219,18 @@ export class AuthService {
   }
 
   async completeRegistration(completeDto: CompleteRegistrationDto): Promise<Partial<User>> {
-    // Check for existing user by email if provided
-    if (completeDto.email) {
-      const existingUser = await this.userRepository.findOne({
-        where: { email: completeDto.email },
-      });
+    // Find existing user by email (created during saveRegistrationStep)
+    const user = await this.userRepository.findOne({
+      where: { email: completeDto.email },
+    });
 
-      if (existingUser) {
-        throw new ConflictException('User with this email already exists');
-      }
+    if (!user) {
+      throw new BadRequestException('No pending registration found. Please start registration from the beginning.');
+    }
+
+    // Check if user already has password (completed registration)
+    if (user.passwordHash) {
+      throw new ConflictException('User with this email already exists');
     }
 
     const passwordHash = await bcrypt.hash(completeDto.password, 12);
@@ -236,20 +239,19 @@ export class AuthService {
     const needsApproval = [UserRole.DOCTOR, UserRole.PROVIDER_ADMIN].includes(completeDto.role);
     const initialStatus = needsApproval ? ProviderStatus.PENDING : ProviderStatus.ACTIVE;
 
-    const user = this.userRepository.create({
-      email: completeDto.email || undefined,
-      passwordHash,
-      roles: [completeDto.role],
-      activeRole: completeDto.role,
-      phoneNumber: completeDto.phoneNumber,
-      firstName: completeDto.firstName,
-      lastName: completeDto.lastName,
-      isEmailVerified: !!completeDto.email,
-      providerStatus: initialStatus,
-      ndprConsent: false,
-      dataProcessingConsent: false,
-      marketingConsent: false,
-    });
+    // Update existing user with full registration data
+    user.passwordHash = passwordHash;
+    user.roles = [completeDto.role];
+    user.activeRole = completeDto.role;
+    user.phoneNumber = completeDto.phoneNumber;
+    user.firstName = completeDto.firstName;
+    user.lastName = completeDto.lastName;
+    user.isEmailVerified = !!completeDto.email;
+    user.providerStatus = initialStatus;
+    user.registrationStep = 0;
+    user.registrationData = null;
+    user.registrationToken = null;
+    user.registrationTokenExpires = null;
 
     await this.userRepository.save(user);
 
