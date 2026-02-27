@@ -48,6 +48,7 @@
 - [x] Auto-approve patient logic - patients are ACTIVE after registration
 - [x] Pending approval flow - doctors/provider admins are PENDING until admin approval
 - [x] Update OrganizationType enum (removed CLINIC, use FacilityType instead)
+- [x] Fix: Make passwordHash nullable for incomplete registrations
 
 ### Pending Backend Tasks
 - [ ] Document upload service (needs S3/Minio integration)

@@ -91,13 +91,13 @@ export class User {
   registrationStep: number;
 
   @Column({ type: 'jsonb', nullable: true })
-  registrationData: Record<string, unknown>;
+  registrationData: Record<string, unknown> | null;
 
-  @Column({ nullable: true })
-  registrationToken: string;
+  @Column({ type: 'varchar', nullable: true })
+  registrationToken: string | null;
 
-  @Column({ nullable: true })
-  registrationTokenExpires: Date;
+  @Column({ type: 'timestamp', nullable: true })
+  registrationTokenExpires: Date | null;
 
   @CreateDateColumn()
   createdAt: Date;

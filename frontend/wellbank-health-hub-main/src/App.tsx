@@ -17,8 +17,6 @@ import WellPoints from "./pages/patient/WellPoints";
 import Profile from "./pages/patient/Profile";
 import DoctorSearch from "./pages/patient/DoctorSearch";
 import DoctorProfile from "./pages/patient/DoctorProfile";
-import PatientOnboarding from "./pages/onboarding/PatientOnboarding";
-import DoctorOnboarding from "./pages/onboarding/DoctorOnboarding";
 import NewOrganization from "./pages/organization/NewOrganization";
 import AddRole from "./pages/AddRole";
 import NotFound from "./pages/NotFound";
@@ -36,8 +34,6 @@ const App = () => (
             <Route path="/" element={<Landing />} />
             <Route path="/login" element={<Login />} />
             <Route path="/register" element={<Register />} />
-            <Route path="/onboarding/patient" element={<PatientOnboarding />} />
-            <Route path="/onboarding/doctor" element={<DoctorOnboarding />} />
             <Route path="/organization/new" element={<NewOrganization />} />
             <Route path="/add-role" element={<AddRole />} />
             <Route element={<PatientLayout />}>
